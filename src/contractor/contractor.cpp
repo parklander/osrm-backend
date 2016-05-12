@@ -251,12 +251,13 @@ parse_segment_lookup_from_csv_files(const std::vector<std::string> &segment_spee
             const auto last = end(line);
 
             // The ulong_long -> uint64_t will likely break on 32bit platforms
-            const auto ok = parse(it,
-                                  last,                                              //
-                                  (ulong_long >> ',' >> ulong_long >> ',' >> uint_ >> *(',' >> *char_)), //
-                                  from_node_id,
-                                  to_node_id,
-                                  speed); //
+            const auto ok =
+                parse(it,
+                      last,
+                      (ulong_long >> ',' >> ulong_long >> ',' >> uint_ >> *(',' >> *char_)),
+                      from_node_id,
+                      to_node_id,
+                      speed);
 
             if (!ok || it != last)
                 throw util::exception{"Segment speed file " + filename + " malformed"};
@@ -334,14 +335,14 @@ parse_turn_penalty_lookup_from_csv_files(const std::vector<std::string> &turn_pe
             const auto last = end(line);
 
             // The ulong_long -> uint64_t will likely break on 32bit platforms
-            const auto ok =
-                parse(it,
-                      last,                                                                     //
-                      (ulong_long >> ',' >> ulong_long >> ',' >> ulong_long >> ',' >> double_ >> *(',' >> *char_)), //
-                      from_node_id,
-                      via_node_id,
-                      to_node_id,
-                      penalty); //
+            const auto ok = parse(it,
+                                  last,
+                                  (ulong_long >> ',' >> ulong_long >> ',' >> ulong_long >> ',' >>
+                                   double_ >> *(',' >> *char_)),
+                                  from_node_id,
+                                  via_node_id,
+                                  to_node_id,
+                                  penalty);
 
             if (!ok || it != last)
                 throw util::exception{"Turn penalty file " + filename + " malformed"};
@@ -807,7 +808,8 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
             // We found a zero-speed edge, so we'll skip this whole edge-based-edge which
             // effectively removes it from the routing network.
-            if (skip_this_edge) {
+            if (skip_this_edge)
+            {
                 penaltyblock++;
                 continue;
             }
@@ -979,12 +981,12 @@ Contractor::WriteContractedGraph(unsigned max_node_id,
         // every target needs to be valid
         BOOST_ASSERT(current_edge.target <= max_used_node_id);
 #ifndef NDEBUG
-        if (current_edge.data.distance <= 0)
+        if (current_edge.data.weight <= 0)
         {
             util::SimpleLogger().Write(logWARNING)
                 << "Edge: " << edge << ",source: " << contracted_edge_list[edge].source
                 << ", target: " << contracted_edge_list[edge].target
-                << ", dist: " << current_edge.data.distance;
+                << ", dist: " << current_edge.data.weight;
 
             util::SimpleLogger().Write(logWARNING) << "Failed at adjacency list of node "
                                                    << contracted_edge_list[edge].source << "/"
