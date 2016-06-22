@@ -470,6 +470,7 @@ Extractor::BuildEdgeExpandedGraph(ScriptingEnvironment &scripting_environment,
                                  config.turn_lane_data_file_name,
                                  config.edge_segment_lookup_path,
                                  config.edge_penalty_path,
+                                 config.edge_penalty_index_path,
                                  config.generate_edge_lookup);
 
     edge_based_graph_factory.GetEdgeBasedEdges(edge_based_edge_list);
