@@ -86,7 +86,7 @@ class InternalDataFacade final : public BaseDataFacade
     util::ShM<unsigned, false>::vector m_geometry_indices;
     util::ShM<extractor::CompressedEdgeContainer::CompressedEdge, false>::vector m_geometry_list;
     util::ShM<bool, false>::vector m_is_core_node;
-    util::ShM<unsigned, false>::vector m_segment_weights;
+    util::ShM<unsigned, false>::vector m_turn_penalties;
     util::ShM<uint8_t, false>::vector m_datasource_list;
     util::ShM<std::string, false>::vector m_datasource_names;
     util::ShM<std::uint32_t, false>::vector m_lane_description_offsets;
@@ -137,9 +137,22 @@ class InternalDataFacade final : public BaseDataFacade
                        sizeof(m_lane_tupel_id_pairs) * size);
     }
 
+    void LoadTurnPenalties(const boost::filesystem::path &turn_penalties_path)
+    {
+        boost::filesystem::ifstream turn_penalties_stream(turn_penalties_path);
+        if (!turn_penalties_stream)
+        {
+            throw util::exception("Could not open " + turn_penalties_path.string() +
+                                  " for reading.");
+        }
+        turn_penalties_stream.seekg(turn_penalties_stream.end);
+        auto size = turn_penalties_stream.tellg();
+        BOOST_ASSERT(size % sizeof(unsigned) == 0);
+        turn_penalties_stream.read(reinterpret_cast<char *>(m_turn_penalties.data()), size);
+    }
+
     void LoadTimestamp(const boost::filesystem::path &timestamp_path)
     {
-        util::SimpleLogger().Write() << "Loading Timestamp";
         boost::filesystem::ifstream timestamp_stream(timestamp_path);
         if (!timestamp_stream)
         {
@@ -409,6 +422,9 @@ class InternalDataFacade final : public BaseDataFacade
 
         util::SimpleLogger().Write() << "loading timestamp";
         LoadTimestamp(config.timestamp_path);
+
+        util::SimpleLogger().Write() << "loading turn penalties";
+        LoadTurnPenalties(config.turn_penalties_path);
 
         util::SimpleLogger().Write() << "loading profile properties";
         LoadProfileProperties(config.properties_path);
