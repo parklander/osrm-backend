@@ -92,6 +92,7 @@ class SharedDataFacade final : public BaseDataFacade
     util::ShM<uint8_t, true>::vector m_datasource_list;
     util::ShM<std::uint32_t, true>::vector m_lane_description_offsets;
     util::ShM<extractor::guidance::TurnLaneType::Mask, true>::vector m_lane_description_masks;
+    util::ShM<unsigned, true>::vector m_turn_penalties;
 
     util::ShM<char, true>::vector m_datasource_name_data;
     util::ShM<std::size_t, true>::vector m_datasource_name_offsets;
@@ -573,6 +574,12 @@ class SharedDataFacade final : public BaseDataFacade
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const override final
     {
         return m_via_node_list.at(id);
+    }
+
+    virtual unsigned GetTurnPenaltyForEdgeID(const unsigned id) const override final
+    {
+        BOOST_ASSERT(m_turn_penalties.size() > id);
+        return m_turn_penalties[id];
     }
 
     extractor::guidance::TurnInstruction
