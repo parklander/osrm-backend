@@ -63,8 +63,8 @@ class EdgeBasedGraphFactory
              const std::string &original_edge_data_filename,
              const std::string &turn_lane_data_filename,
              const std::string &edge_segment_lookup_filename,
-             const std::string &edge_penalty_filename,
-             const std::string &edge_penalty_index_filename,
+             const std::string &turn_penalties_filename,
+             const std::string &turn_penalties_index_filename,
              const bool generate_edge_lookup);
 
     // The following get access functions destroy the content in the factory
@@ -130,7 +130,7 @@ class EdgeBasedGraphFactory
                                    const std::string &turn_lane_data_filename,
                                    const std::string &edge_segment_lookup_filename,
                                    const std::string &edge_fixed_penalties_filename,
-                                   const std::string &edge_penalties_index_filename,
+                                   const std::string &turn_penalties_index_filename,
                                    const bool generate_edge_lookup);
 
     void InsertEdgeBasedNode(const NodeID u, const NodeID v);
