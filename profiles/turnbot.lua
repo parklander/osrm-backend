@@ -3,6 +3,6 @@
 
 require 'testbot'
 
-function turn_function (angle)
-    return 200*math.abs(angle)/180 -- penalty 
+function turn_function (turn)
+    turn.weight = 200 * math.abs(turn.angle) / 180 -- penalty 
 end

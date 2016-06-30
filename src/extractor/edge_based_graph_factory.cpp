@@ -40,16 +40,18 @@ EdgeBasedGraphFactory::EdgeBasedGraphFactory(
     const std::unordered_set<NodeID> &traffic_lights,
     std::shared_ptr<const RestrictionMap> restriction_map,
     const std::vector<QueryNode> &node_info_list,
-    ProfileProperties profile_properties,
-    const util::NameTable &name_table,
+    ProfileProperties profile_properties_,
+    const util::NameTable &name_table_,
     const std::vector<std::uint32_t> &turn_lane_offsets,
     const std::vector<guidance::TurnLaneType::Mask> &turn_lane_masks)
     : m_max_edge_id(0), m_node_info_list(node_info_list),
       m_node_based_graph(std::move(node_based_graph)),
       m_restriction_map(std::move(restriction_map)), m_barrier_nodes(barrier_nodes),
       m_traffic_lights(traffic_lights), m_compressed_edge_container(compressed_edge_container),
-      profile_properties(std::move(profile_properties)), name_table(name_table),
-      turn_lane_offsets(turn_lane_offsets), turn_lane_masks(turn_lane_masks)
+      profile_properties(std::move(profile_properties_)),
+      fallback_to_duration(std::string(profile_properties.weight_name) == "duration"),
+      name_table(name_table_), turn_lane_offsets(turn_lane_offsets),
+      turn_lane_masks(turn_lane_masks)
 {
 }
 
@@ -239,8 +241,7 @@ unsigned EdgeBasedGraphFactory::RenumberEdges()
             // oneway streets always require this self-loop. Other streets only if a u-turn plus
             // traversal
             // of the street takes longer than the loop
-            m_edge_based_node_weights.push_back(edge_data.weight +
-                                                profile_properties.u_turn_penalty);
+            m_edge_based_node_weights.push_back(edge_data.weight);
 
             BOOST_ASSERT(numbered_edges_count < m_node_based_graph->GetNumberOfEdges());
             edge_data.edge_id = numbered_edges_count;
@@ -313,20 +314,22 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
     std::size_t node_based_edge_counter = 0;
     std::size_t original_edges_counter = 0;
-    restricted_turns_counter = 0;
-    skipped_uturns_counter = 0;
-    skipped_barrier_turns_counter = 0;
 
     std::ofstream edge_data_file(original_edge_data_filename.c_str(), std::ios::binary);
-    std::ofstream edge_segment_file;
     std::ofstream turn_penalties_file(edge_fixed_penalties_filename.c_str(), std::ios::binary);
-    std::ofstream turn_penalties_index_file(turn_penalties_index_filename.c_str(),
-                                            std::ios::binary);
+    std::ofstream edge_segment_file;
+    std::ofstream turn_penalties_index_file;
 
     if (generate_edge_lookup)
     {
         edge_segment_file.open(edge_segment_lookup_filename.c_str(), std::ios::binary);
+        turn_penalties_index_file.open(turn_penalties_index_filename.c_str(), std::ios::binary);
     }
+
+    // write the number of weights (e.g. custom weight + duration, or only duration as header)
+    const unsigned char number_of_encoded_weights = fallback_to_duration ? 1 : 2;
+    turn_penalties_file.write(reinterpret_cast<const char *>(&number_of_encoded_weights),
+                              sizeof(number_of_encoded_weights));
 
     // Writes a dummy value at the front that is updated later with the total length
     const unsigned length_prefix_empty_space{0};
@@ -423,28 +426,31 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
                 // the following is the core of the loop.
                 unsigned weight = edge_data1.weight;
+                unsigned duration = edge_data1.duration;
                 if (m_traffic_lights.find(node_v) != m_traffic_lights.end())
                 {
                     weight += profile_properties.traffic_signal_penalty;
                 }
 
-                const int32_t turn_penalty =
-                    scripting_environment.GetTurnPenalty(180. - turn.angle);
-                const auto turn_instruction = turn.instruction;
-
-                if (turn_instruction.direction_modifier == guidance::DirectionModifier::UTurn)
+                ExtractionTurn extracted_turn(turn.instruction.direction_modifier ==
+                                                  guidance::DirectionModifier::UTurn,
+                                              180. - turn.angle);
+                scripting_environment.ProcessTurn(extracted_turn);
+                if (fallback_to_duration && extracted_turn.weight < 0 &&
+                    extracted_turn.duration > 0)
                 {
-                    weight += profile_properties.u_turn_penalty;
+                    extracted_turn.weight =
+                        extracted_turn.duration * 10.; // convert from seconds in deci-seconds
                 }
-
-                weight += turn_penalty;
+                weight += std::max<decltype(extracted_turn.weight)>(0, extracted_turn.weight);
+                duration += std::max<decltype(extracted_turn.duration)>(0, extracted_turn.duration);
 
                 BOOST_ASSERT(m_compressed_edge_container.HasEntryForID(edge_from_u));
                 original_edge_data_vector.emplace_back(
                     m_compressed_edge_container.GetPositionForID(edge_from_u),
                     edge_data1.name_id,
                     turn.lane_data_id,
-                    turn_instruction,
+                    turn.instruction,
                     entry_class_id,
                     edge_data1.travel_mode);
 
@@ -464,11 +470,24 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 m_edge_based_edge_list.emplace_back(
                     edge_data1.edge_id, edge_data2.edge_id, turn_id, weight, true, false);
 
-                unsigned fixed_penalty = weight - edge_data1.weight;
-                BOOST_ASSERT(turn_penalties_file.tellp() == turn_id * sizeof(fixed_penalty));
+                unsigned weight_penalty = weight - edge_data1.weight;
+                BOOST_ASSERT(turn_penalties_file.tellp() ==
+                             sizeof(number_of_encoded_weights) +
+                                 turn_id * sizeof(weight_penalty) * number_of_encoded_weights);
                 // save penalties index by turn_id
-                turn_penalties_file.write(reinterpret_cast<const char *>(&fixed_penalty),
-                                          sizeof(fixed_penalty));
+                turn_penalties_file.write(reinterpret_cast<const char *>(&weight_penalty),
+                                          sizeof(weight_penalty));
+                // the weight and the duration are not the same thing
+                if (!fallback_to_duration)
+                {
+                    unsigned duration_penalty = duration - edge_data1.duration;
+                    BOOST_ASSERT(turn_penalties_file.tellp() ==
+                                 sizeof(number_of_encoded_weights) +
+                                     turn_id * sizeof(weight_penalty) * number_of_encoded_weights +
+                                     1);
+                    turn_penalties_file.write(reinterpret_cast<const char *>(&duration_penalty),
+                                              sizeof(duration_penalty));
+                }
 
                 // Here is where we write out the mapping between the edge-expanded edges, and
                 // the node-based edges that are originally used to calculate the `weight`
@@ -581,12 +600,6 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                  << " edges";
     util::SimpleLogger().Write() << "Edge-expanded graph ...";
     util::SimpleLogger().Write() << "  contains " << m_edge_based_edge_list.size() << " edges";
-    util::SimpleLogger().Write() << "  skips " << restricted_turns_counter << " turns, "
-                                                                              "defined by "
-                                 << m_restriction_map->size() << " restrictions";
-    util::SimpleLogger().Write() << "  skips " << skipped_uturns_counter << " U turns";
-    util::SimpleLogger().Write() << "  skips " << skipped_barrier_turns_counter
-                                 << " turns over barriers";
 }
 
 std::vector<util::guidance::BearingClass> EdgeBasedGraphFactory::GetBearingClasses() const

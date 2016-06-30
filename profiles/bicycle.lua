@@ -425,12 +425,12 @@ function way_function (way, result)
   end
 end
 
-function turn_function (angle)
+function turn_function (turn)
   -- compute turn penalty as angle^2, with a left/right bias
-  k = turn_penalty/(90.0*90.0)
-  if angle>=0 then
-    return angle*angle*k/turn_bias
+  k = turn.angle * turn.angle * turn_penalty / (90.0 * 90.0)
+  if turn.angle >= 0 then
+    return k / turn_bias
   else
-    return angle*angle*k*turn_bias
+    return k * turn_bias
   end
 end
