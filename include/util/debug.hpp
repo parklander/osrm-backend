@@ -20,17 +20,12 @@ namespace guidance
 {
 inline void print(const engine::guidance::RouteStep &step)
 {
-    const auto lanes = step.intersections.front().lanes;
-
     std::cout << static_cast<int>(step.maneuver.instruction.type) << " "
               << static_cast<int>(step.maneuver.instruction.direction_modifier) << "  "
               << static_cast<int>(step.maneuver.waypoint_type) << " "
-              << " Lanes: (" << static_cast<int>(lanes.lanes_in_turn) << ", "
-              << static_cast<int>(lanes.first_lane_from_the_right) << ")"
               << " Duration: " << step.duration << " Distance: " << step.distance
               << " Geometry: " << step.geometry_begin << " " << step.geometry_end
-              << " exit: " << step.maneuver.exit << " Intersections: " << step.intersections.size()
-              << " [";
+              << "\n\tIntersections: " << step.intersections.size() << " [";
 
     for (const auto &intersection : step.intersections)
     {
@@ -40,7 +35,9 @@ inline void print(const engine::guidance::RouteStep &step)
         std::cout << ", entry: ";
         for (auto entry : intersection.entry)
             std::cout << " " << (entry ? "true" : "false");
-        std::cout << ")";
+        const auto lanes = intersection.lanes;
+        std::cout<< " Lanes: (" << static_cast<int>(lanes.lanes_in_turn) << ", "
+              << static_cast<int>(lanes.first_lane_from_the_right) << "))";
     }
     std::cout << "] name[" << step.name_id << "]: " << step.name;
 }
