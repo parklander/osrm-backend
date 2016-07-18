@@ -214,6 +214,10 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
          luabind::class_<util::Coordinate>("Coordinate")
              .property("lon", &lonToDouble<util::Coordinate>)
              .property("lat", &latToDouble<util::Coordinate>),
+         luabind::class_<ExtractionTurn>("Turn")
+             .def_readonly("angle", &ExtractionTurn::angle)
+             .property("duration", &ExtractionTurn::GetDuration, &ExtractionTurn::SetDuration)
+             .property("weight", &ExtractionTurn::GetWeight, &ExtractionTurn::SetWeight),
          luabind::class_<RasterDatum>("RasterDatum")
              .def_readonly("datum", &RasterDatum::datum)
              .def("invalid_data", &RasterDatum::get_invalid)];

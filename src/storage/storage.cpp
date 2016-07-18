@@ -2,6 +2,7 @@
 #include "contractor/query_edge.hpp"
 #include "extractor/compressed_edge_container.hpp"
 #include "extractor/guidance/turn_instruction.hpp"
+#include "extractor/io.hpp"
 #include "extractor/original_edge_data.hpp"
 #include "extractor/profile_properties.hpp"
 #include "extractor/query_node.hpp"
@@ -250,22 +251,31 @@ int Storage::Run()
                                               number_of_core_markers);
 
     // load turn penalties
-    boost::filesystem::ifstream turn_penalties_file(config.turn_penalties_path);
-    if (!turn_penalties_file)
+    boost::filesystem::ifstream turn_weight_penalties_file(config.turn_weight_penalties_path);
+    if (!turn_weight_penalties_file)
     {
-        throw util::exception("Could not open " + config.turn_penalties_path.string() +
+        throw util::exception("Could not open " + config.turn_weight_penalties_path.string() +
                               " for reading.");
     }
-    unsigned char number_of_encoded_weights = 0;
-    turn_penalties_file.read(reinterpret_cast<char *>(&number_of_encoded_weights),
-                             sizeof(number_of_encoded_weights));
-    turn_penalties_file.seekg(0, turn_penalties_file.end);
-    auto turn_penalties_size =
-        static_cast<std::size_t>(turn_penalties_file.tellg()) - sizeof(number_of_encoded_weights);
-    BOOST_ASSERT(turn_penalties_size % sizeof(unsigned) == 0);
-    shared_layout_ptr->SetBlockSize<unsigned>(SharedDataLayout::TURN_PENALTIES,
-                                              turn_penalties_size / sizeof(unsigned));
-    shared_layout_ptr->SetBlockSize<unsigned char>(SharedDataLayout::NUM_ENCODED_WEIGHTS, 1);
+    extractor::io::TurnPenaltiesHeader turn_weight_penalties_header;
+    turn_weight_penalties_file.read(reinterpret_cast<char *>(&turn_weight_penalties_header),
+                                    sizeof(turn_weight_penalties_header));
+    shared_layout_ptr->SetBlockSize<std::uint16_t>(
+        SharedDataLayout::TURN_WEIGHT_PENALTIES,
+        turn_weight_penalties_header.number_of_penalties * sizeof(std::uint16_t));
+
+    boost::filesystem::ifstream turn_duration_penalties_file(config.turn_duration_penalties_path);
+    if (!turn_duration_penalties_file)
+    {
+        throw util::exception("Could not open " + config.turn_duration_penalties_path.string() +
+                              " for reading.");
+    }
+    extractor::io::TurnPenaltiesHeader turn_duration_penalties_header;
+    turn_duration_penalties_file.read(reinterpret_cast<char *>(&turn_duration_penalties_header),
+                                      sizeof(turn_duration_penalties_header));
+    shared_layout_ptr->SetBlockSize<std::uint16_t>(
+        SharedDataLayout::TURN_DURATION_PENALTIES,
+        turn_duration_penalties_header.number_of_penalties * sizeof(std::uint16_t));
 
     // load coordinate size
     boost::filesystem::ifstream nodes_input_stream(config.nodes_data_path, std::ios::binary);
@@ -681,15 +691,17 @@ int Storage::Run()
     }
 
     // load turn penalties
-    unsigned *turn_penalties_ptr = shared_layout_ptr->GetBlockPtr<unsigned, true>(
-        shared_memory_ptr, SharedDataLayout::TURN_PENALTIES);
+    auto *turn_weight_penalties_ptr = shared_layout_ptr->GetBlockPtr<std::uint16_t, true>(
+        shared_memory_ptr, SharedDataLayout::TURN_WEIGHT_PENALTIES);
+    auto *turn_duration_penalties_ptr = shared_layout_ptr->GetBlockPtr<std::uint16_t, true>(
+        shared_memory_ptr, SharedDataLayout::TURN_DURATION_PENALTIES);
     // seek to begining of actual data block
-    turn_penalties_file.seekg(sizeof(number_of_encoded_weights), turn_penalties_file.beg);
-    turn_penalties_file.read(reinterpret_cast<char *>(turn_penalties_ptr), turn_penalties_size);
-
-    unsigned char *encoded_weights_ptr = shared_layout_ptr->GetBlockPtr<unsigned char, true>(
-        shared_memory_ptr, SharedDataLayout::NUM_ENCODED_WEIGHTS);
-    *encoded_weights_ptr = number_of_encoded_weights;
+    turn_weight_penalties_file.read(reinterpret_cast<char *>(turn_weight_penalties_ptr),
+                                    sizeof(std::uint16_t) *
+                                        turn_weight_penalties_header.number_of_penalties);
+    turn_duration_penalties_file.read(reinterpret_cast<char *>(turn_duration_penalties_ptr),
+                                      sizeof(std::uint16_t) *
+                                          turn_duration_penalties_header.number_of_penalties);
 
     // load the nodes of the search graph
     QueryGraph::NodeArrayEntry *graph_node_list_ptr =

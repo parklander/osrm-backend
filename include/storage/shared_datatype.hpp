@@ -49,8 +49,8 @@ const constexpr char *block_id_to_name[] = {"NAME_OFFSETS",
                                             "TURN_LANE_DATA",
                                             "LANE_DESCRIPTION_OFFSETS",
                                             "LANE_DESCRIPTION_MASKS",
-                                            "TURN_PENALTIES",
-                                            "NUM_ENCODED_WEIGHTS"};
+                                            "TURN_WEIGHT_PENALTIES",
+                                            "TURN_DURATION_PENALTIES"};
 
 struct SharedDataLayout
 {
@@ -89,8 +89,8 @@ struct SharedDataLayout
         TURN_LANE_DATA,
         LANE_DESCRIPTION_OFFSETS,
         LANE_DESCRIPTION_MASKS,
-        TURN_PENALTIES,
-        NUM_ENCODED_WEIGHTS,
+        TURN_WEIGHT_PENALTIES,
+        TURN_DURATION_PENALTIES,
         NUM_BLOCKS
     };
 

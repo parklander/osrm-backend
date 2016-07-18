@@ -469,7 +469,8 @@ Extractor::BuildEdgeExpandedGraph(ScriptingEnvironment &scripting_environment,
                                  config.edge_output_path,
                                  config.turn_lane_data_file_name,
                                  config.edge_segment_lookup_path,
-                                 config.turn_penalties_path,
+                                 config.turn_weight_penalties_path,
+                                 config.turn_duration_penalties_path,
                                  config.turn_penalties_index_path,
                                  config.generate_edge_lookup);
 
