@@ -140,23 +140,6 @@ TurnLaneHandler::assignTurnLanes(const NodeID at, const EdgeID via_edge, Interse
         // case TurnLaneScenario::UNKNOWN:
         // case TurnLaneScenario::NONE:
         // case TurnLaneScenario::INVALID:
-        {
-            /*
-            static int print_count = 0;
-            if (TurnLaneScenario::NONE != scenario && print_count++ < 10)
-            {
-                std::cout << "[Unhandled] " << (int)lane_description_id << " -- "
-                          << (int)previous_description_id << "\n"
-                          << std::endl;
-                util::guidance::printTurnAssignmentData(
-                    at, lane_data, intersection, node_info_list);
-
-                if (previous_node != SPECIAL_NODEID)
-                    util::guidance::printTurnAssignmentData(
-                        previous_node, previous_lane_data, previous_intersection, node_info_list);
-            }
-            */
-        }
         return intersection;
     }
 }
