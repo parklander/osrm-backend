@@ -71,8 +71,8 @@ struct ExtractorConfig
         rtree_nodes_output_path = basepath + ".osrm.ramIndex";
         rtree_leafs_output_path = basepath + ".osrm.fileIndex";
         edge_segment_lookup_path = basepath + ".osrm.edge_segment_lookup";
-        turn_duration_penalties_path = basepath + ".osrm.turn_weight_penalties";
-        turn_weight_penalties_path = basepath + ".osrm.turn_duration_penalties";
+        turn_duration_penalties_path = basepath + ".osrm.turn_duration_penalties";
+        turn_weight_penalties_path = basepath + ".osrm.turn_weight_penalties";
         turn_penalties_index_path = basepath + ".osrm.turn_penalties_index";
         edge_based_node_weights_output_path = basepath + ".osrm.enw";
         profile_properties_output_path = basepath + ".osrm.properties";
