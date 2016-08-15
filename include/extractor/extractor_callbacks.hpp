@@ -45,9 +45,11 @@ class ExtractorCallbacks
                        guidance::TurnLaneDescription_hash>
         lane_description_map;
     ExtractionContainers &external_memory;
+    bool fallback_to_duration;
 
   public:
-    explicit ExtractorCallbacks(ExtractionContainers &extraction_containers);
+    explicit ExtractorCallbacks(ExtractionContainers &extraction_containers,
+                                bool fallback_to_duration);
 
     ExtractorCallbacks(const ExtractorCallbacks &) = delete;
     ExtractorCallbacks &operator=(const ExtractorCallbacks &) = delete;
