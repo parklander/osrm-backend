@@ -17,6 +17,7 @@
 #include "util/timing_util.hpp"
 #include "util/typedefs.hpp"
 
+#include <boost/algorithm/clamp.hpp>
 #include <boost/assert.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/functional/hash.hpp>
@@ -382,7 +383,8 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
         return region;
     };
 
-    const auto edge_based_graph_region = mmap_file(edge_based_graph_filename, boost::interprocess::read_only);
+    const auto edge_based_graph_region =
+        mmap_file(edge_based_graph_filename, boost::interprocess::read_only);
 
     const bool update_edge_weights = !segment_speed_filenames.empty();
     const bool update_turn_penalties = !turn_penalty_filenames.empty();
@@ -734,8 +736,12 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
     tbb::parallel_invoke(maybe_save_geometries, save_datasource_indexes, save_datastore_names);
 
-    auto turn_weight_penalty_ptr = reinterpret_cast<std::uint16_t *>(turn_weight_penalties_region.get_address());
-    auto turn_duration_penalty_ptr = reinterpret_cast<std::uint16_t *>(turn_duration_penalties_region.get_address());
+    auto turn_weight_penalty_ptr = reinterpret_cast<std::uint16_t *>(
+        reinterpret_cast<char *>(turn_weight_penalties_region.get_address()) +
+        sizeof(extractor::io::TurnPenaltiesHeader));
+    auto turn_duration_penalty_ptr = reinterpret_cast<std::uint16_t *>(
+        reinterpret_cast<char *>(turn_duration_penalties_region.get_address()) +
+        sizeof(extractor::io::TurnPenaltiesHeader));
     auto turn_index_block_ptr = reinterpret_cast<const extractor::io::TurnIndexBlock *>(
         turn_penalties_index_region.get_address());
     auto edge_segment_byte_ptr = reinterpret_cast<const char *>(edge_segment_region.get_address());
@@ -816,11 +822,16 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
             auto turn_weight_penalty = *turn_weight_penalty_ptr;
             auto turn_duration_penalty = *turn_duration_penalty_ptr;
 
-            const auto turn_iter = turn_penalty_lookup.find(
-                std::make_tuple(turn_index_block_ptr->from_id, turn_index_block_ptr->via_id, turn_index_block_ptr->to_id));
+            const auto turn_iter =
+                turn_penalty_lookup.find(std::make_tuple(turn_index_block_ptr->from_id,
+                                                         turn_index_block_ptr->via_id,
+                                                         turn_index_block_ptr->to_id));
             if (turn_iter != turn_penalty_lookup.end())
             {
-                turn_weight_penalty = boost::numeric_cast<std::uint16_t>(turn_iter->second.first * 10);
+                turn_weight_penalty = boost::numeric_cast<std::uint16_t>(boost::algorithm::clamp(
+                    turn_iter->second.first * 10,
+                    std::numeric_limits<decltype(turn_weight_penalty)>::min(),
+                    std::numeric_limits<decltype(turn_weight_penalty)>::max()));
 
                 if (turn_weight_penalty + new_weight < compressed_edge_nodes)
                 {

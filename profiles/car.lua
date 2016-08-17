@@ -531,12 +531,12 @@ function way_function (way, result)
 end
 
 function turn_function(turn)
-  ---- compute turn penalty as angle^2, with a left/right bias
-  normalized_angle = turn.angle / 90.0
-  if turn.angle >= 0.0 then
-    turn.duration = normalized_angle * normalized_angle * turn_penalty * (1 - turn_bias)
+  -- compute turn penalty as angle^2, with a left/right bias
+  local normalized_angle = turn.angle / 90.0
+  if normalized_angle >= 0.0 then
+    turn.duration = normalized_angle * normalized_angle * turn_penalty / turn_bias
   else
-    turn.duration = normalized_angle * normalized_angle * turn_penalty * (1 + turn_bias)
+    turn.duration = normalized_angle * normalized_angle * turn_penalty * turn_bias
   end
 
   if turn.is_uturn then
@@ -545,6 +545,8 @@ function turn_function(turn)
 
   -- for distance based routing we don't want to have penalties based on turn angle
   if properties.weight_name == 'distance' then
-    turn.weight = 0
+     turn.weight = 0
+  else
+     turn.weight = turn.duration
   end
 end

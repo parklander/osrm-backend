@@ -4,5 +4,5 @@
 require 'testbot'
 
 function turn_function (turn)
-    turn.weight = 200 * math.abs(turn.angle) / 180 -- penalty 
+   turn.weight = 20 * math.abs(turn.angle) / 180 -- penalty
 end

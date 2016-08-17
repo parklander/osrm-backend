@@ -426,25 +426,6 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 BOOST_ASSERT(!edge_data2.reversed);
 
                 // the following is the core of the loop.
-                unsigned weight = edge_data1.weight;
-                unsigned duration = edge_data1.duration;
-                if (m_traffic_lights.find(node_v) != m_traffic_lights.end())
-                {
-                    weight += profile_properties.traffic_signal_penalty;
-                }
-
-                ExtractionTurn extracted_turn(turn.instruction.direction_modifier ==
-                                                  guidance::DirectionModifier::UTurn,
-                                              180. - turn.angle);
-                scripting_environment.ProcessTurn(extracted_turn);
-                if (fallback_to_duration && extracted_turn.weight < 0 &&
-                    extracted_turn.duration > 0)
-                {
-                    extracted_turn.weight =
-                        extracted_turn.duration * 10.; // convert from seconds in deci-seconds
-                }
-                weight += std::max<decltype(extracted_turn.weight)>(0, extracted_turn.weight);
-                duration += std::max<decltype(extracted_turn.duration)>(0, extracted_turn.duration);
 
                 // First write out the meta information of a turn edge
                 BOOST_ASSERT(m_compressed_edge_container.HasEntryForID(edge_from_u));
@@ -471,11 +452,20 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                     duration_penalty += profile_properties.traffic_signal_penalty;
                 }
 
-                if (use_turn_function)
+                // MKR if (use_turn_function)
                 {
-                    const auto extracted_turn = ProcessTurn(turn, lua_state);
-                    weight_penalty += extracted_turn.weight;
-                    duration_penalty += extracted_turn.duration;
+                    ExtractionTurn extracted_turn(180. - turn.angle,
+                                                  turn.instruction.direction_modifier ==
+                                                      guidance::DirectionModifier::UTurn);
+                    scripting_environment.ProcessTurn(extracted_turn);
+
+                    // convert penalty seconds to 16bit deci-seconds
+                    // we limit the duration/weight of turn penalties to 2^15-1 which roughly
+                    // translates to 1 hour 49 minutes
+                    weight_penalty +=
+                        boost::numeric_cast<std::uint16_t>(extracted_turn.weight * 10);
+                    duration_penalty +=
+                        boost::numeric_cast<std::uint16_t>(extracted_turn.duration * 10);
                 }
 
                 BOOST_ASSERT(SPECIAL_NODEID != edge_data1.edge_id);

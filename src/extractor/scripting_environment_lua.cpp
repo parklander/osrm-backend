@@ -171,11 +171,6 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
                        &guidance::RoadClassification::GetClass,
                        &guidance::RoadClassification::SetClass),
 
-         luabind::class_<ExtractionTurn>("Turn")
-             .def_readonly("angle", &ExtractionTurn::angle)
-             .def_readwrite("duration", &ExtractionTurn::duration)
-             .def_readwrite("weight", &ExtractionTurn::weight),
-
          luabind::class_<ExtractionWay>("ResultWay")
              // .def(luabind::constructor<>())
              .def_readwrite("forward_speed", &ExtractionWay::forward_speed)
@@ -216,8 +211,9 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              .property("lat", &latToDouble<util::Coordinate>),
          luabind::class_<ExtractionTurn>("Turn")
              .def_readonly("angle", &ExtractionTurn::angle)
-             .property("duration", &ExtractionTurn::GetDuration, &ExtractionTurn::SetDuration)
-             .property("weight", &ExtractionTurn::GetWeight, &ExtractionTurn::SetWeight),
+             .def_readonly("is_uturn", &ExtractionTurn::is_uturn)
+             .def_readwrite("weight", &ExtractionTurn::weight)
+             .def_readwrite("duration", &ExtractionTurn::duration),
          luabind::class_<RasterDatum>("RasterDatum")
              .def_readonly("datum", &RasterDatum::datum)
              .def("invalid_data", &RasterDatum::get_invalid)];

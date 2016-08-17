@@ -94,15 +94,15 @@ surface_speeds = {
 -- these need to be global because they are accesed externaly
 properties.traffic_signal_penalty        = 2
 properties.use_turn_restrictions         = false
-properties.u_turn_penalty                = 20
 properties.continue_straight_at_waypoint = false
 properties.weight_name                   = 'duration'
 --properties.weight_name                   = 'cyclebiliyt'
 
 local obey_oneway               = true
 local ignore_areas              = true
+local uturn_penalty             = 20
 local turn_penalty              = 6
-local turn_bias                 = 0.2
+local turn_bias                 = 1.4
 -- reduce the driving speed by 30% for unsafe roads
 -- local safety_penalty            = 0.7
 local safety_penalty            = 1.0
@@ -428,10 +428,14 @@ function turn_function(turn)
   -- compute turn penalty as angle^2, with a left/right bias
   normalized_angle = turn.angle / 90.0
   if turn.angle >= 0.0 then
-    turn.duration = normalized_angle * normalized_angle * turn_penalty * (1 - turn_bias)
+    turn.duration = normalized_angle * normalized_angle * turn_penalty / turn_bias
   else
-    turn.duration = normalized_angle * normalized_angle * turn_penalty * (1 + turn_bias)
+    turn.duration = normalized_angle * normalized_angle * turn_penalty * turn_bias
   end
 
-  turn.weight = turn.duration;
+  if turn.is_uturn then
+    turn.duration = turn.duration + uturn_penalty
+  end
+
+  turn.weight = turn.duration
 end
