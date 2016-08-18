@@ -27,7 +27,8 @@ IntersectionGenerator::IntersectionGenerator(
     const CompressedEdgeContainer &compressed_edge_container)
     : node_based_graph(node_based_graph), restriction_map(restriction_map),
       barrier_nodes(barrier_nodes), node_info_list(node_info_list),
-      compressed_edge_container(compressed_edge_container)
+      compressed_edge_container(compressed_edge_container),
+      coordinate_extractor(node_based_graph, compressed_edge_container, node_info_list)
 {
 }
 
@@ -117,6 +118,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             // to use the corrected coordinate, we require it to be at least a bit further down the
             // road than the offset coordinate. We postulate a minimum Distance of 2 Meters
             const constexpr double DESIRED_COORDINATE_DIFFERENCE = 2.0;
+            const constexpr double LOOKAHEAD_DISTANCE = 2.5;
             const auto getCorrectedCoordinate = [turn_coordinate](
                 const util::Coordinate &lookahead_coordinate,
                 const util::Coordinate &offset_coordinate) {
@@ -157,7 +159,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
 
             // the default distance we lookahead on a road. This distance prevents small mapping
             // errors to impact the turn angles.
-            const constexpr double LOOKAHEAD_DISTANCE = 3.0;
             const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
             // The standard with of a interstate highway is 3.7 meters. Local roads have
             // smaller widths, ranging from 2.5 to 3.25 meters. As a compromise, we use
@@ -167,9 +168,13 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             // The first coordinate (the origin) can depend on the number of lanes turning onto,
             // just as the target coordinate can. Here we compute the corrected coordinate for the
             // incoming edge.
-            const auto first_coordinate = [&]() {
-                const auto number_of_destination_lanes =
-                    onto_data.road_classification.GetNumberOfLanes();
+            auto coordinate =
+                coordinate_extractor.GetCoordinateAlongRoad(from_node, via_eid, INVERT, turn_node);
+
+            const auto number_of_destination_lanes =
+                onto_data.road_classification.GetNumberOfLanes();
+
+            auto first_coordinate = [&]() {
                 // if the number of lanes is not specified, we don't adjust the turn-angles
                 if (1 >= number_of_destination_lanes)
                     return getRepresentativeCoordinate(from_node,
