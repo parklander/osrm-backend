@@ -736,10 +736,10 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
     tbb::parallel_invoke(maybe_save_geometries, save_datasource_indexes, save_datastore_names);
 
-    auto turn_weight_penalty_ptr = reinterpret_cast<std::uint16_t *>(
+    auto turn_weight_penalty_ptr = reinterpret_cast<TurnPenalty *>(
         reinterpret_cast<char *>(turn_weight_penalties_region.get_address()) +
         sizeof(extractor::io::TurnPenaltiesHeader));
-    auto turn_duration_penalty_ptr = reinterpret_cast<std::uint16_t *>(
+    auto turn_duration_penalty_ptr = reinterpret_cast<TurnPenalty *>(
         reinterpret_cast<char *>(turn_duration_penalties_region.get_address()) +
         sizeof(extractor::io::TurnPenaltiesHeader));
     auto turn_index_block_ptr = reinterpret_cast<const extractor::io::TurnIndexBlock *>(
@@ -828,21 +828,20 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
                                                          turn_index_block_ptr->to_id));
             if (turn_iter != turn_penalty_lookup.end())
             {
-                turn_weight_penalty = boost::numeric_cast<std::uint16_t>(boost::algorithm::clamp(
-                    turn_iter->second.first * 10,
-                    std::numeric_limits<decltype(turn_weight_penalty)>::min(),
-                    std::numeric_limits<decltype(turn_weight_penalty)>::max()));
-
-                if (turn_weight_penalty + new_weight < compressed_edge_nodes)
+                auto turn_weight_penalty_100ms = turn_iter->second.first * 10;
+                if (turn_weight_penalty_100ms + new_weight < compressed_edge_nodes)
                 {
                     util::SimpleLogger().Write(logWARNING)
                         << "turn penalty " << turn_iter->second.first << " for turn "
                         << turn_index_block_ptr->from_id << ", " << turn_index_block_ptr->via_id
                         << ", " << turn_index_block_ptr->to_id
-                        << " is too negative: clamping turn weight to " << compressed_edge_nodes;
+                        << " is too negative: clamping turn weight to " << (compressed_edge_nodes - new_weight);
 
-                    new_weight = compressed_edge_nodes;
-                    turn_weight_penalty = 0;
+                    turn_weight_penalty = boost::numeric_cast<TurnPenalty>(compressed_edge_nodes - new_weight);
+                }
+                else
+                {
+                    turn_weight_penalty = boost::numeric_cast<TurnPenalty>(turn_weight_penalty_100ms);
                 }
             }
 

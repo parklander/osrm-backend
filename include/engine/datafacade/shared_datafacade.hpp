@@ -601,13 +601,13 @@ class SharedDataFacade final : public BaseDataFacade
         return m_via_node_list.at(id);
     }
 
-    virtual unsigned GetWeightPenaltyForEdgeID(const unsigned id) const override final
+    virtual TurnPenalty GetWeightPenaltyForEdgeID(const unsigned id) const override final
     {
         BOOST_ASSERT(m_turn_weight_penalties.size() > id);
         return m_turn_weight_penalties[id];
     }
 
-    virtual unsigned GetDurationPenaltyForEdgeID(const unsigned id) const override final
+    virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const override final
     {
         BOOST_ASSERT(m_turn_duration_penalties.size() > id);
         return m_turn_duration_penalties[id];

@@ -72,9 +72,9 @@ class BaseDataFacade
 
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const = 0;
 
-    virtual unsigned GetWeightPenaltyForEdgeID(const unsigned id) const = 0;
+    virtual TurnPenalty GetWeightPenaltyForEdgeID(const unsigned id) const = 0;
 
-    virtual unsigned GetDurationPenaltyForEdgeID(const unsigned id) const = 0;
+    virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const = 0;
 
     virtual void GetUncompressedGeometry(const EdgeID id,
                                          std::vector<NodeID> &result_nodes) const = 0;

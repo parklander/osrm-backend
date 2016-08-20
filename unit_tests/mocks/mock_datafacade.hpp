@@ -57,11 +57,11 @@ class MockDataFacade final : public engine::datafacade::BaseDataFacade
     {
         return SPECIAL_NODEID;
     }
-    virtual unsigned GetWeightPenaltyForEdgeID(const unsigned /* id */) const override final
+    TurnPenalty GetWeightPenaltyForEdgeID(const unsigned /* id */) const override final
     {
         return 0;
     }
-    virtual unsigned GetDurationPenaltyForEdgeID(const unsigned /* id */) const override final
+    TurnPenalty GetDurationPenaltyForEdgeID(const unsigned /* id */) const override final
     {
         return 0;
     }

@@ -356,8 +356,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                             std::numeric_limits<std::uint32_t>::max());
 
     // FIXME these need to be tuned in pre-allocated size
-    std::vector<std::uint16_t> turn_weight_penalties;
-    std::vector<std::uint16_t> turn_duration_penalties;
+    std::vector<TurnPenalty> turn_weight_penalties;
+    std::vector<TurnPenalty> turn_duration_penalties;
 
     guidance::LaneDataIdMap lane_data_map;
     for (const auto node_u : util::irange(0u, m_node_based_graph->GetNumberOfNodes()))
@@ -443,8 +443,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 }
 
                 // compute weight and duration penalties
-                std::uint16_t weight_penalty = 0;
-                std::uint16_t duration_penalty = 0;
+                TurnPenalty weight_penalty = 0;
+                TurnPenalty duration_penalty = 0;
                 if (m_traffic_lights.find(node_v) != m_traffic_lights.end())
                 {
                     // FIXME we can't assume this here!
@@ -459,13 +459,12 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                       guidance::DirectionModifier::UTurn);
                     scripting_environment.ProcessTurn(extracted_turn);
 
-                    // convert penalty seconds to 16bit deci-seconds
+                    // convert penalty seconds to signed 16bit deci-seconds
                     // we limit the duration/weight of turn penalties to 2^15-1 which roughly
-                    // translates to 1 hour 49 minutes
-                    weight_penalty +=
-                        boost::numeric_cast<std::uint16_t>(extracted_turn.weight * 10);
+                    // translates to 54 minutes
+                    weight_penalty += boost::numeric_cast<TurnPenalty>(extracted_turn.weight * 10);
                     duration_penalty +=
-                        boost::numeric_cast<std::uint16_t>(extracted_turn.duration * 10);
+                        boost::numeric_cast<TurnPenalty>(extracted_turn.duration * 10);
                 }
 
                 BOOST_ASSERT(SPECIAL_NODEID != edge_data1.edge_id);

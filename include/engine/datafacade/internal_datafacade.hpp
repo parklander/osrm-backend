@@ -87,8 +87,8 @@ class InternalDataFacade final : public BaseDataFacade
     util::ShM<unsigned, false>::vector m_geometry_indices;
     util::ShM<extractor::CompressedEdgeContainer::CompressedEdge, false>::vector m_geometry_list;
     util::ShM<bool, false>::vector m_is_core_node;
-    util::ShM<std::uint16_t, false>::vector m_turn_weight_penalties;
-    util::ShM<std::uint16_t, false>::vector m_turn_duration_penalties;
+    util::ShM<TurnPenalty, false>::vector m_turn_weight_penalties;
+    util::ShM<TurnPenalty, false>::vector m_turn_duration_penalties;
     util::ShM<uint8_t, false>::vector m_datasource_list;
     util::ShM<std::string, false>::vector m_datasource_names;
     util::ShM<std::uint32_t, false>::vector m_lane_description_offsets;
@@ -140,7 +140,7 @@ class InternalDataFacade final : public BaseDataFacade
     }
 
     void LoadTurnPenalties(const boost::filesystem::path &turn_penalties_path,
-                           std::vector<std::uint16_t> &turn_penalties) const
+                           std::vector<TurnPenalty> &turn_penalties) const
     {
         boost::filesystem::ifstream turn_penalties_stream(turn_penalties_path);
         if (!turn_penalties_stream)
@@ -681,13 +681,13 @@ class InternalDataFacade final : public BaseDataFacade
         return m_via_node_list[id];
     }
 
-    virtual unsigned GetWeightPenaltyForEdgeID(const unsigned id) const override final
+    virtual TurnPenalty GetWeightPenaltyForEdgeID(const unsigned id) const override final
     {
         BOOST_ASSERT(m_turn_weight_penalties.size() > id);
         return m_turn_weight_penalties[id];
     }
 
-    virtual unsigned GetDurationPenaltyForEdgeID(const unsigned id) const override final
+    virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const override final
     {
         BOOST_ASSERT(m_turn_duration_penalties.size() > id);
         return m_turn_duration_penalties[id];
