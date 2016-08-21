@@ -689,6 +689,14 @@ class InternalDataFacade final : public BaseDataFacade
 
     virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const override final
     {
+        if (m_turn_duration_penalties.empty())
+        {
+            // MKR: fallback to weight penalties
+            // "Only load the duration vector if weight doesn't
+            //   contain the same values (safes memory consumption)"
+            return GetWeightPenaltyForEdgeID(id);
+        }
+
         BOOST_ASSERT(m_turn_duration_penalties.size() > id);
         return m_turn_duration_penalties[id];
     }
