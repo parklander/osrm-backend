@@ -615,7 +615,7 @@ Feature: Turn Lane Guidance
             | x,c       | xb,roundabout,roundabout | depart,roundabout-exit-undefined,arrive | ,,    |
             | x,a       | xb,roundabout,roundabout | depart,roundabout-exit-undefined,arrive | ,,    |
 
-    @anticipate
+    @anticipate @todo @2032
     Scenario: No Lanes for Roundabouts, see #2626
         Given the node map
             | a | b |   |   | x |
