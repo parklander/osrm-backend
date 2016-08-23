@@ -24,14 +24,14 @@ class CoordinateExtractor
     // Find a interpolated coordinate a long the compressed geometries. The desired coordinate
     // should be in a certain distance. This method is dedicated to find representative coordinates
     // at turns.
-    util::Coordinate GetCoordinateAlongRoad(const NodeID from_node,
-                                            const EdgeID via_edge,
+    util::Coordinate GetCoordinateAlongRoad(const NodeID intersection_node,
+                                            const EdgeID turn_edge,
                                             const bool traversed_in_reverse,
                                             const NodeID to_node) const;
 
     // instead of finding only a single coordinate, we can also list all coordinates along a road.
-    std::vector<util::Coordinate> GetCoordinatesAlongRoad(const NodeID from_node,
-                                                          const EdgeID via_edge,
+    std::vector<util::Coordinate> GetCoordinatesAlongRoad(const NodeID intersection_node,
+                                                          const EdgeID turn_edge,
                                                           const bool traversed_in_reverse,
                                                           const NodeID to_node) const;
 

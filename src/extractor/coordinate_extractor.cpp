@@ -1,9 +1,11 @@
 #include "extractor/coordinate_extractor.hpp"
+#include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/toolkit.hpp"
 
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <numeric>
 #include <utility>
 
 namespace osrm
@@ -35,13 +37,14 @@ CoordinateExtractor::CoordinateExtractor(
 {
 }
 
-util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_node,
-                                                             const EdgeID via_edge,
+util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
+                                                             const EdgeID turn_edge,
                                                              const bool traversed_in_reverse,
                                                              const NodeID to_node) const
 {
     // we first extract all coordinates from the road
-    auto coordinates = GetCoordinatesAlongRoad(from_node, via_edge, traversed_in_reverse, to_node);
+    auto coordinates =
+        GetCoordinatesAlongRoad(intersection_node, turn_edge, traversed_in_reverse, to_node);
 
     // if we are looking at a straight line, we don't care where exactly the coordinate
     // is. Simply return the final coordinate. Turn angles/turn vectors are the same no matter which
@@ -84,16 +87,15 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_n
     // of the actual roads. If a road splits in two, the ways for the separate direction can be
     // modeled very far apart with a steep angle at the split, even though the roads actually don't
     // take a turn. The distance between the coordinates can be an indicator for these small changes
-    const std::vector<double> coordinate_distances = [coordinates]() {
-        std::vector<double> coordinate_distances;
-        coordinate_distances.reserve(coordinates.size());
-        coordinate_distances.push_back(0);
-        for (std::size_t coord_index = 1; coord_index < coordinates.size(); ++coord_index)
-            coordinate_distances.push_back(
-                coordinate_distances.back() +
-                util::coordinate_calculation::haversineDistance(coordinates[coord_index - 1],
-                                                                coordinates[coord_index]));
-        return coordinate_distances;
+    const auto segment_distances = [&coordinates]() {
+        std::vector<double> segment_distances;
+        segment_distances.reserve(coordinates.size());
+        segment_distances.push_back(0);
+
+        for (std::size_t i = 1; i < coordinates.size(); ++i)
+            segment_distances.push_back(util::coordinate_calculation::haversineDistance(
+                coordinates[i - 1], coordinates[i]));
+        return segment_distances;
     }();
 
     // We use the sum of least squares to calculate a linea regression through our coordinates. This
@@ -149,23 +151,28 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_n
     // calculate the distances of all nodes in between to the straight line between a and e. If the
     // distances inbetween are small, we assume a straight road. To calculate these distances, we
     // don't use the coordinates of the road itself but our just calculated regression vector
-    const double max_deviation_from_straight = [coordinates, regression_vector]() {
+    const auto GetMaxDeviation = [](std::vector<util::Coordinate>::const_iterator range_begin,
+                                    const std::vector<util::Coordinate>::const_iterator &range_end,
+                                    const util::Coordinate &straight_begin,
+                                    const util::Coordinate &straight_end) {
         double deviation = 0;
-        for (std::size_t coord_index = 0; coord_index + 1 < coordinates.size(); ++coord_index)
+        for (; range_begin != range_end; range_begin = std::next(range_begin))
         {
             // find the projected coordinate
-            auto coord_between =
-                util::coordinate_calculation::projectPointOnSegment(
-                    regression_vector.first, regression_vector.second, coordinates[coord_index])
-                    .second;
-            // and calculate the distance between the intermediate coordinate and the coordinate on
-            // the osrm-way
-            deviation = std::max(deviation,
-                                 util::coordinate_calculation::haversineDistance(
-                                     coord_between, coordinates[coord_index]));
+            auto coord_between = util::coordinate_calculation::projectPointOnSegment(
+                                     straight_begin, straight_end, *range_begin)
+                                     .second;
+            // and calculate the distance between the intermediate coordinate and the coordinate
+            // on the osrm-way
+            deviation = std::max(
+                deviation,
+                util::coordinate_calculation::haversineDistance(coord_between, *range_begin));
         }
         return deviation;
-    }();
+    };
+
+    const double max_deviation_from_straight = GetMaxDeviation(
+        coordinates.begin(), coordinates.end(), regression_vector.first, regression_vector.second);
 
     // if the deviation from a straight line is small, we can savely use the coordinate. We use half
     // a lane as heuristic to determine if the road is straight enough.
@@ -175,13 +182,11 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_n
     // The second indicater is the lanes at the intersections. We have to consider both the lanes at
     // the incoming road and the destination way since both counts can indicate how far a road would
     // have to go to connect two ways.
-    const auto number_of_destination_lanes =
-        node_based_graph.GetEdgeData(via_edge).road_classification.GetNumberOfLanes();
-    if (coordinate_distances[1] >
-        number_of_destination_lanes * ASSUMED_LANE_WIDTH * 0.5 + LOOKAHEAD_DISTANCE_WITHOUT_LANES)
+    if (segment_distances[1] > 2 * LOOKAHEAD_DISTANCE_WITHOUT_LANES)
         return coordinates[1];
 
     BOOST_ASSERT(coordinates.size() >= 3);
+    // Compute all turn angles along the road
     const auto turn_angles = [coordinates]() {
         std::vector<double> turn_angles;
         turn_angles.reserve(coordinates.size() - 2);
@@ -193,15 +198,64 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_n
         return turn_angles;
     }();
 
+    const util::Coordinate turn_coordinate =
+        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
+
+    const auto printStatus = [&]() {
+        const util::Coordinate destination_coordinate =
+            node_coordinates[traversed_in_reverse ? intersection_node : to_node];
+        std::cout << "Swtiched size: " << count << " to " << coordinates.size()
+                  << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
+                  << toFloating(turn_coordinate.lon) << " - " << toFloating(coordinates.back().lat)
+                  << " " << toFloating(coordinates.back().lon) << " - "
+                  << toFloating(destination_coordinate.lat) << " "
+                  << toFloating(destination_coordinate.lon)
+                  << " Regression: " << toFloating(regression_vector.first.lat) << " "
+                  << toFloating(regression_vector.first.lon) << " - "
+                  << toFloating(regression_vector.second.lat) << " "
+                  << toFloating(regression_vector.second.lon) << ":\n\t" << std::setprecision(5);
+        std::cout << "Angles:";
+        for (auto angle : turn_angles)
+            std::cout << " " << (int)angle;
+        std::cout << " Distances:";
+        double distance = 0;
+        for (std::size_t i = 0; i < coordinates.size(); ++i)
+        {
+            distance += segment_distances[i];
+            std::cout << " " << distance;
+            auto coord_between =
+                util::coordinate_calculation::projectPointOnSegment(
+                    regression_vector.first, regression_vector.second, coordinates[i])
+                    .second;
+            std::cout << " (" << util::coordinate_calculation::haversineDistance(coord_between,
+                                                                                 coordinates[i])
+                      << ")";
+        }
+        std::cout << std::endl;
+    };
+
+    const auto total_distance =
+        std::accumulate(segment_distances.begin(), segment_distances.end(), 0);
+    if (segment_distances[1] < 5 && total_distance > 0.9 * FAR_LOOKAHEAD_DISTANCE &&
+        0.5 * ASSUMED_LANE_WIDTH >
+            GetMaxDeviation(
+                coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back()))
+    {
+        // could be too agressive? Depend on lanes to check how far we want to go out?
+        // compare
+        // http://www.openstreetmap.org/search?query=52.411243%2013.363575#map=19/52.41124/13.36357
+        return GetCorrectedCoordinate(turn_coordinate, coordinates[1], coordinates[2]);
+    }
+
     // detect curves: If we see many coordinates that follow a similar turn angle, we assume a curve
     const bool has_many_coordinates = coordinates.size() >= 5;
     const bool all_angles_are_similar = [&turn_angles]() {
         for (std::size_t i = 1; i < turn_angles.size(); ++i)
         {
-            const constexpr double ANGLE_SIMILARITY_ALLOWNESS = 5;
             if (guidance::angularDeviation(turn_angles[i - 1], turn_angles[i]) >
-                    FUZZY_ANGLE_DIFFERENCE ||
-                (turn_angles[i] > 180 == turn_angles[i - 1] < 180))
+                    guidance::FUZZY_ANGLE_DIFFERENCE ||
+                (turn_angles[i] > guidance::STRAIGHT_ANGLE ==
+                 turn_angles[i - 1] < guidance::STRAIGHT_ANGLE))
                 return false;
         }
         return true;
@@ -236,64 +290,29 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID from_n
     if (has_many_coordinates && all_angles_are_similar)
         return coordinates[1];
 
-    if (coordinates.size() + 1 < count)
-    {
-        const util::Coordinate turn_coordinate =
-            node_coordinates[traversed_in_reverse ? to_node : from_node];
-        const util::Coordinate destination_coordinate =
-            node_coordinates[traversed_in_reverse ? from_node : to_node];
-        std::cout << "Swtiched size: " << count << " to " << coordinates.size()
-                  << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
-                  << toFloating(turn_coordinate.lon) << " - " << toFloating(coordinates.back().lat)
-                  << " " << toFloating(coordinates.back().lon) << " - "
-                  << toFloating(destination_coordinate.lat) << " "
-                  << toFloating(destination_coordinate.lon)
-                  << " Regression: " << toFloating(regression_vector.first.lat) << " "
-                  << toFloating(regression_vector.first.lon) << " - "
-                  << toFloating(regression_vector.second.lat) << " "
-                  << toFloating(regression_vector.second.lon) << ":\n\t" << std::setprecision(5);
-        std::cout << "Angles:";
-        for (auto angle : turn_angles)
-            std::cout << " " << (int)angle;
-        std::cout << " Distances:";
-        double distance = 0;
-        for (std::size_t i = 0; i < coordinates.size(); ++i)
-        {
-            if (i > 0)
-                distance += util::coordinate_calculation::haversineDistance(coordinates[i - 1],
-                                                                            coordinates[i]);
-            std::cout << " " << distance;
-            auto coord_between =
-                util::coordinate_calculation::projectPointOnSegment(
-                    regression_vector.first, regression_vector.second, coordinates[i])
-                    .second;
-            std::cout << " (" << util::coordinate_calculation::haversineDistance(coord_between,
-                                                                                 coordinates[i])
-                      << ")";
-        }
-        std::cout << std::endl;
-    }
+    // Unhandled situations
+    printStatus();
     return TrimCoordinatesToLength(std::move(coordinates), 10.0).back();
 }
 
 std::vector<util::Coordinate>
-CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID from_node,
-                                             const EdgeID via_edge,
+CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
+                                             const EdgeID turn_edge,
                                              const bool traversed_in_reverse,
                                              const NodeID to_node) const
 {
-    if (!compressed_geometries.HasEntryForID(via_edge))
+    if (!compressed_geometries.HasEntryForID(turn_edge))
     {
         if (traversed_in_reverse)
-            return {{node_coordinates[to_node]}, {node_coordinates[from_node]}};
+            return {{node_coordinates[to_node]}, {node_coordinates[intersection_node]}};
         else
-            return {{node_coordinates[from_node]}, {node_coordinates[to_node]}};
+            return {{node_coordinates[intersection_node]}, {node_coordinates[to_node]}};
     }
     else
     {
         // extracts the geometry in coordinates from the compressed edge container
         std::vector<util::Coordinate> result;
-        const auto &geometry = compressed_geometries.GetBucketReference(via_edge);
+        const auto &geometry = compressed_geometries.GetBucketReference(turn_edge);
         result.reserve(geometry.size() + 2);
 
         // the compressed edges contain node ids, we transfer them to coordinates accessing the
@@ -312,11 +331,11 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID from_node,
                            geometry.rend(),
                            std::back_inserter(result),
                            compressedGeometryToCoordinate);
-            result.push_back(node_coordinates[from_node]);
+            result.push_back(node_coordinates[intersection_node]);
         }
         else
         {
-            result.push_back(node_coordinates[from_node]);
+            result.push_back(node_coordinates[intersection_node]);
             std::transform(geometry.begin(),
                            geometry.end(),
                            std::back_inserter(result),
