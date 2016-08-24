@@ -65,7 +65,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
     bool has_uturn_edge = false;
     bool uturn_could_be_valid = false;
     const util::Coordinate turn_coordinate = node_info_list[turn_node];
-    bool print = true;
+    bool print = false;
     for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
     {
         BOOST_ASSERT(onto_edge != SPECIAL_EDGEID);
@@ -120,7 +120,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             // The first coordinate (the origin) can depend on the number of lanes turning onto,
             // just as the target coordinate can. Here we compute the corrected coordinate for the
             // incoming edge.
-            std::cout << "Computing Source coordinate\n";
             const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
                 from_node,
                 via_eid,
@@ -128,7 +127,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 turn_node,
                 node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
 
-            std::cout << "Computing Onto coordinate\n";
             const auto third_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
                 turn_node,
                 onto_edge,
@@ -159,7 +157,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             angle = util::coordinate_calculation::computeAngle(
                 first_coordinate, turn_coordinate, third_coordinate);
 
-            if (angularDeviation(angle, compare_angle) > 1)
+            if (angularDeviation(angle, compare_angle) > 40)
             {
                 std::cout << "Changed Angle from " << compare_angle << " to " << angle
                           << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
