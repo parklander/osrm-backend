@@ -64,10 +64,8 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
 
     bool has_uturn_edge = false;
     bool uturn_could_be_valid = false;
-    const auto &via_data = node_based_graph.GetEdgeData(via_eid);
-    const auto number_of_incoming_lanes = via_data.road_classification.GetNumberOfLanes();
     const util::Coordinate turn_coordinate = node_info_list[turn_node];
-    bool print = false;
+    bool print = true;
     for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
     {
         BOOST_ASSERT(onto_edge != SPECIAL_EDGEID);
@@ -115,141 +113,28 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
         }
         else
         {
-            // to use the corrected coordinate, we require it to be at least a bit further down the
-            // road than the offset coordinate. We postulate a minimum Distance of 2 Meters
-            const constexpr double DESIRED_COORDINATE_DIFFERENCE = 2.0;
-            const constexpr double LOOKAHEAD_DISTANCE = 2.5;
-            const auto getCorrectedCoordinate = [turn_coordinate](
-                const util::Coordinate &lookahead_coordinate,
-                const util::Coordinate &offset_coordinate) {
-                // if the coordinates are close together, we were not able to look far ahead, so
-                // we can use the end-coordinate
-                if (util::coordinate_calculation::haversineDistance(
-                        offset_coordinate, lookahead_coordinate) < DESIRED_COORDINATE_DIFFERENCE)
-                    return lookahead_coordinate;
-                else
-                {
-                    // to correct for the initial offset, we move the lookahead coordinate close
-                    // to the original road. We do so by subtracting the difference between the
-                    // turn coordinate and the offset coordinate from the lookahead coordinge:
-                    //
-                    // a ------ b ------ c
-                    //          |
-                    //          d
-                    //             \
-                    //                \
-                    //                   e
-                    //
-                    // is converted to:
-                    //
-                    // a ------ b ------ c
-                    //             \
-                    //                \
-                    //                   e
-                    //
-                    // for turn node `b`, offset_coordinate `d` and lookahead_coordinate `e`
-                    const auto corrected_lon =
-                        lookahead_coordinate.lon - offset_coordinate.lon + turn_coordinate.lon;
-                    const auto corrected_lat =
-                        lookahead_coordinate.lat - offset_coordinate.lat + turn_coordinate.lat;
-
-                    return util::Coordinate(corrected_lon, corrected_lat);
-                }
-            };
-
             // the default distance we lookahead on a road. This distance prevents small mapping
             // errors to impact the turn angles.
             const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
-            // The standard with of a interstate highway is 3.7 meters. Local roads have
-            // smaller widths, ranging from 2.5 to 3.25 meters. As a compromise, we use
-            // the 3.25 here for our angle calculations
-            const constexpr double ASSUMED_LANE_WIDTH = 3.25;
 
             // The first coordinate (the origin) can depend on the number of lanes turning onto,
             // just as the target coordinate can. Here we compute the corrected coordinate for the
             // incoming edge.
-            auto coordinate =
-                coordinate_extractor.GetCoordinateAlongRoad(from_node, via_eid, INVERT, turn_node);
+            std::cout << "Computing Source coordinate\n";
+            const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
+                from_node,
+                via_eid,
+                INVERT,
+                turn_node,
+                node_based_graph.GetEdgeData(onto_edge).road_classification.GetNumberOfLanes());
 
-            const auto number_of_destination_lanes =
-                onto_data.road_classification.GetNumberOfLanes();
-
-            auto first_coordinate = [&]() {
-                // if the number of lanes is not specified, we don't adjust the turn-angles
-                if (1 >= number_of_destination_lanes)
-                    return getRepresentativeCoordinate(from_node,
-                                                       turn_node,
-                                                       via_eid,
-                                                       INVERT,
-                                                       compressed_edge_container,
-                                                       node_info_list,
-                                                       LOOKAHEAD_DISTANCE_WITHOUT_LANES);
-                else
-                {
-                    // We assume a road to be drawn in the middle of the lanes. Our initial
-                    // offset can be accounted for by half the number of present lanes.
-                    const double initial_offset =
-                        ASSUMED_LANE_WIDTH * 0.5 * number_of_destination_lanes;
-                    const auto offset_coordinate =
-                        getRepresentativeCoordinate(from_node,
-                                                    turn_node,
-                                                    via_eid,
-                                                    INVERT,
-                                                    compressed_edge_container,
-                                                    node_info_list,
-                                                    initial_offset);
-
-                    const auto lookahead_coordinate =
-                        getRepresentativeCoordinate(from_node,
-                                                    turn_node,
-                                                    via_eid,
-                                                    INVERT,
-                                                    compressed_edge_container,
-                                                    node_info_list,
-                                                    initial_offset + LOOKAHEAD_DISTANCE);
-                    return getCorrectedCoordinate(lookahead_coordinate, offset_coordinate);
-                }
-            }();
-
-            // find a representative coordinate along the onto edge, based on the number of lanes
-            // and the form of the way
-            const auto third_coordinate = [&]() {
-                // if the number of lanes is not specified, we don't adjust the turn-angles
-                if (1 >= number_of_incoming_lanes)
-                    return getRepresentativeCoordinate(turn_node,
-                                                       to_node,
-                                                       onto_edge,
-                                                       !INVERT,
-                                                       compressed_edge_container,
-                                                       node_info_list,
-                                                       LOOKAHEAD_DISTANCE_WITHOUT_LANES);
-
-                else
-                {
-                    // We assume a road to be drawn in the middle of the lanes. Our initial
-                    // offset can be accounted for by half the number of present lanes.
-                    const double initial_offset =
-                        ASSUMED_LANE_WIDTH * 0.5 * number_of_incoming_lanes;
-
-                    const auto offset_coordinate =
-                        getRepresentativeCoordinate(turn_node,
-                                                    to_node,
-                                                    onto_edge,
-                                                    !INVERT,
-                                                    compressed_edge_container,
-                                                    node_info_list,
-                                                    initial_offset);
-                    const auto lookahead_coordinate =
-                        getRepresentativeCoordinate(turn_node,
-                                                    to_node,
-                                                    onto_edge,
-                                                    !INVERT,
-                                                    compressed_edge_container,
-                                                    node_info_list,
-                                                    initial_offset + LOOKAHEAD_DISTANCE);
-                    return getCorrectedCoordinate(lookahead_coordinate, offset_coordinate);
-                }
-            }();
+            std::cout << "Computing Onto coordinate\n";
+            const auto third_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
+                turn_node,
+                onto_edge,
+                !INVERT,
+                to_node,
+                node_based_graph.GetEdgeData(via_eid).road_classification.GetNumberOfLanes());
 
             const auto compare_first =
                 getRepresentativeCoordinate(from_node,
@@ -274,7 +159,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             angle = util::coordinate_calculation::computeAngle(
                 first_coordinate, turn_coordinate, third_coordinate);
 
-            if (angularDeviation(angle, compare_angle) > 20)
+            if (angularDeviation(angle, compare_angle) > 1)
             {
                 std::cout << "Changed Angle from " << compare_angle << " to " << angle
                           << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)

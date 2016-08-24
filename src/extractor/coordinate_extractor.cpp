@@ -37,20 +37,27 @@ CoordinateExtractor::CoordinateExtractor(
 {
 }
 
-util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
-                                                             const EdgeID turn_edge,
-                                                             const bool traversed_in_reverse,
-                                                             const NodeID to_node) const
+util::Coordinate
+CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
+                                            const EdgeID turn_edge,
+                                            const bool traversed_in_reverse,
+                                            const NodeID to_node,
+                                            const std::uint16_t number_of_from_lanes) const
 {
     // we first extract all coordinates from the road
     auto coordinates =
         GetCoordinatesAlongRoad(intersection_node, turn_edge, traversed_in_reverse, to_node);
 
+    std::cout << "Coordinates Found: " << coordinates.size() << std::endl;
+
     // if we are looking at a straight line, we don't care where exactly the coordinate
     // is. Simply return the final coordinate. Turn angles/turn vectors are the same no matter which
     // coordinate we look at.
     if (coordinates.size() == 2)
+    {
+        std::cout << "Direct Coordinate" << std::endl;
         return coordinates.back();
+    }
 
     // Our very first step trims the coordinates to the FAR_LOOKAHEAD_DISTANCE. The idea here is to
     // filter all coordinates at the end of the road and consider only the form close to the
@@ -70,7 +77,10 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
     // If this reduction leaves us with only two coordinates, the turns/angles are represented in a
     // valid way. Only curved roads and other difficult scenarios will require multiple coordinates.
     if (coordinates.size() == 2)
+    {
+        std::cout << "Direct Coordinate" << std::endl;
         return coordinates.back();
+    }
 
     // The coordinates along the road are in different distances from the source. If only very few
     // coordinates are close to the intersection, It might just be we simply looked to far down the
@@ -98,9 +108,57 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
         return segment_distances;
     }();
 
-    // We use the sum of least squares to calculate a linea regression through our coordinates. This
-    // regression gives a good idea of how the road can be perceived and corrects for initial and
-    // final corrections
+    // if the very first coordinate along the road is reasonably far away from the road, we assume
+    // the coordinate to correctly represent the turn. This could probably be improved using
+    // information on the very first turn angle (requires knowledge about previous road) and the
+    // respective lane widths.
+    if (segment_distances[1] >
+        number_of_from_lanes * 0.5 * ASSUMED_LANE_WIDTH + LOOKAHEAD_DISTANCE_WITHOUT_LANES)
+    {
+        std::cout << "Long Distance to first coordinate\n";
+        return coordinates[1];
+    }
+
+    // In an ideal world, the road would only have two coordinates if it goes mainly straigt. Since
+    // OSM is operating on noisy data, we have some variations going straight.
+    //
+    //              b                       d
+    // a ---------------------------------------------- e
+    //                           c
+    //
+    // The road from a-e offers a lot of variation, even though it is mostly straight. Here we
+    // calculate the distances of all nodes in between to the straight line between a and e. If the
+    // distances inbetween are small, we assume a straight road. To calculate these distances, we
+    // don't use the coordinates of the road itself but our just calculated regression vector
+    const auto GetMaxDeviation = [](std::vector<util::Coordinate>::const_iterator range_begin,
+                                    const std::vector<util::Coordinate>::const_iterator &range_end,
+                                    const util::Coordinate &straight_begin,
+                                    const util::Coordinate &straight_end) {
+        double deviation = 0;
+        for (; range_begin != range_end; range_begin = std::next(range_begin))
+        {
+            // find the projected coordinate
+            auto coord_between = util::coordinate_calculation::projectPointOnSegment(
+                                     straight_begin, straight_end, *range_begin)
+                                     .second;
+            // and calculate the distance between the intermediate coordinate and the coordinate
+            // on the osrm-way
+            deviation = std::max(
+                deviation,
+                util::coordinate_calculation::haversineDistance(coord_between, *range_begin));
+        }
+        return deviation;
+    };
+
+    const util::Coordinate turn_coordinate =
+        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
+
+    const auto &turn_edge_data = node_based_graph.GetEdgeData(turn_edge);
+    const auto number_of_turn_edge_lanes = turn_edge_data.road_classification.GetNumberOfLanes();
+
+    // We use the sum of least squares to calculate a linear regression through our coordinates.
+    // This regression gives a good idea of how the road can be perceived and corrects for initial
+    // and final corrections
     const auto regression_vector =
         [coordinates]() -> std::pair<util::Coordinate, util::Coordinate> {
         double sum_lon = 0, sum_lat = 0, sum_lon_lat = 0, sum_lon_lon = 0;
@@ -140,50 +198,16 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
         return {regression_first, regression_end};
     }();
 
-    // In an ideal world, the road would only have two coordinates if it goes mainly straigt. Since
-    // OSM is operating on noisy data, we have some variations going straight.
-    //
-    //              b                       d
-    // a ---------------------------------------------- e
-    //                           c
-    //
-    // The road from a-e offers a lot of variation, even though it is mostly straight. Here we
-    // calculate the distances of all nodes in between to the straight line between a and e. If the
-    // distances inbetween are small, we assume a straight road. To calculate these distances, we
-    // don't use the coordinates of the road itself but our just calculated regression vector
-    const auto GetMaxDeviation = [](std::vector<util::Coordinate>::const_iterator range_begin,
-                                    const std::vector<util::Coordinate>::const_iterator &range_end,
-                                    const util::Coordinate &straight_begin,
-                                    const util::Coordinate &straight_end) {
-        double deviation = 0;
-        for (; range_begin != range_end; range_begin = std::next(range_begin))
-        {
-            // find the projected coordinate
-            auto coord_between = util::coordinate_calculation::projectPointOnSegment(
-                                     straight_begin, straight_end, *range_begin)
-                                     .second;
-            // and calculate the distance between the intermediate coordinate and the coordinate
-            // on the osrm-way
-            deviation = std::max(
-                deviation,
-                util::coordinate_calculation::haversineDistance(coord_between, *range_begin));
-        }
-        return deviation;
-    };
-
     const double max_deviation_from_straight = GetMaxDeviation(
         coordinates.begin(), coordinates.end(), regression_vector.first, regression_vector.second);
 
     // if the deviation from a straight line is small, we can savely use the coordinate. We use half
     // a lane as heuristic to determine if the road is straight enough.
     if (max_deviation_from_straight < 0.5 * ASSUMED_LANE_WIDTH)
+    {
+        std::cout << "Assuming Straight Line" << std::endl;
         return coordinates.back();
-
-    // The second indicater is the lanes at the intersections. We have to consider both the lanes at
-    // the incoming road and the destination way since both counts can indicate how far a road would
-    // have to go to connect two ways.
-    if (segment_distances[1] > 2 * LOOKAHEAD_DISTANCE_WITHOUT_LANES)
-        return coordinates[1];
+    }
 
     BOOST_ASSERT(coordinates.size() >= 3);
     // Compute all turn angles along the road
@@ -198,23 +222,20 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
         return turn_angles;
     }();
 
-    const util::Coordinate turn_coordinate =
-        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
-
     const auto printStatus = [&]() {
         const util::Coordinate destination_coordinate =
             node_coordinates[traversed_in_reverse ? intersection_node : to_node];
-        std::cout << "Swtiched size: " << count << " to " << coordinates.size()
-                  << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
+        std::cout << "Coordinates: Full: " << count << "  Reduced: " << coordinates.size()
+                  << " Turn: " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
                   << toFloating(turn_coordinate.lon) << " - " << toFloating(coordinates.back().lat)
-                  << " " << toFloating(coordinates.back().lon) << " - "
-                  << toFloating(destination_coordinate.lat) << " "
+                  << " " << toFloating(coordinates.back().lon)
+                  << " Regression: " << toFloating(destination_coordinate.lat) << " "
                   << toFloating(destination_coordinate.lon)
                   << " Regression: " << toFloating(regression_vector.first.lat) << " "
                   << toFloating(regression_vector.first.lon) << " - "
                   << toFloating(regression_vector.second.lat) << " "
                   << toFloating(regression_vector.second.lon) << ":\n\t" << std::setprecision(5);
-        std::cout << "Angles:";
+        std::cout << "Stats: Turn Angles:";
         for (auto angle : turn_angles)
             std::cout << " " << (int)angle;
         std::cout << " Distances:";
@@ -234,9 +255,28 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
         std::cout << std::endl;
     };
 
+    // If the very first coordinate is within lane offsets and the rest offers a near straight line,
+    // we use an offset coordinate.
+    //
+    // ----------------------------------------
+    //
+    // ----------------------------------------
+    //   a -
+    // ----------------------------------------
+    //        \
+    // ----------------------------------------
+    //           \
+    //             b --------------------c
+    //
+    // Will be considered a very slight turn, instead of the near 90 degree turn we see right here.
     const auto total_distance =
         std::accumulate(segment_distances.begin(), segment_distances.end(), 0);
-    if (segment_distances[1] < 5 && total_distance > 0.9 * FAR_LOOKAHEAD_DISTANCE &&
+
+    const bool first_vertex_is_close_enough =
+        segment_distances[1] <=
+        (number_of_from_lanes + number_of_turn_edge_lanes) * 0.5 * ASSUMED_LANE_WIDTH;
+
+    if (first_vertex_is_close_enough && total_distance > 0.9 * FAR_LOOKAHEAD_DISTANCE &&
         0.5 * ASSUMED_LANE_WIDTH >
             GetMaxDeviation(
                 coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back()))
@@ -288,7 +328,10 @@ util::Coordinate CoordinateExtractor::GetCoordinateAlongRoad(const NodeID inters
     // The turn from a-b to b-c is straight. With every vector we go further down the road, the turn
     // angle would get stronger. Therefore we consider the very first coordinate as our best choice
     if (has_many_coordinates && all_angles_are_similar)
+    {
+        std::cout << "Consider turn a curve" << std::endl;
         return coordinates[1];
+    }
 
     // Unhandled situations
     printStatus();
@@ -326,7 +369,6 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
         // traversed_in_reverse
         if (traversed_in_reverse)
         {
-            result.push_back(node_coordinates[to_node]);
             std::transform(geometry.rbegin(),
                            geometry.rend(),
                            std::back_inserter(result),
@@ -340,7 +382,6 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
                            geometry.end(),
                            std::back_inserter(result),
                            compressedGeometryToCoordinate);
-            result.push_back(node_coordinates[to_node]);
         }
         return result;
     }
