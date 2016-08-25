@@ -250,11 +250,16 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
 
         for (std::size_t index = 2; index < coordinates.size(); ++index)
         {
+            std::cout << "Deviation: " << GetMaxDeviation(coordinates.begin(),
+                                coordinates.begin() + index,
+                                coordinates.front(),
+                                *(coordinates.begin() + index)) << std::endl;
+
             // check the deviation from a straight line
             if (GetMaxDeviation(coordinates.begin(),
                                 coordinates.begin() + index,
                                 coordinates.front(),
-                                *(coordinates.begin() + index - 1)) < 0.5 * ASSUMED_LANE_WIDTH)
+                                *(coordinates.begin() + index)) < 0.25 * ASSUMED_LANE_WIDTH)
                 straight_distance += segment_distances[index];
             else
                 break;
@@ -273,7 +278,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         static std::set<util::Coordinate> examples;
         if (examples.count(turn_coordinate) == 0 && examples.size() < 20)
         {
-            std::cout << "SWT " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
+            std::cout << "SWT - " << straight_distance << " - " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
                       << toFloating(turn_coordinate.lon) << std::endl;
             examples.insert(turn_coordinate);
         }

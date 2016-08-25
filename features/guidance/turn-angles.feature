@@ -424,12 +424,12 @@ Feature: Simple Turns
             | gehijb | turn | yes    | 3     |
 
         When I route I should get
-            | waypoints | route          | turns                         |
-            | a,c       | road,road      | depart,arrive                 |
-            | a,l       | road,turn,turn | depart,turn left,arrive       |
-            | a,f       | road,turn,turn | depart,continue u-turn,arrive |
-            | d,f       | road,road      | depart,arrive                 |
-            | d,l       | road,turn,turn | depart,turn right,arrive      |
-            | d,c       | road,turn,turn | depart,continue u-turn,arrive |
-            | g,l       | turn,turn,turn | depart,continue u-turn,arrive |
-            | g,c       | turn,road,road | depart,turn left,arrive       |
+            | waypoints | route          | turns                        |
+            | a,c       | road,road      | depart,arrive                |
+            | a,l       | road,turn,turn | depart,turn left,arrive      |
+            | a,f       | road,road,road | depart,continue uturn,arrive |
+            | d,f       | road,road      | depart,arrive                |
+            | d,l       | road,turn,turn | depart,turn right,arrive     |
+            | d,c       | road,road,road | depart,continue uturn,arrive |
+            | g,l       | turn,turn,turn | depart,continue uturn,arrive |
+            | g,c       | turn,road,road | depart,turn left,arrive      |

@@ -505,17 +505,12 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
         intersection[0].entry_allowed = false;
     }
 
-    std::cout << "[intersection]\n";
-    for (auto road : intersection)
-        std::cout << "\t" << toString(road) << std::endl;
-
     // a merge including the first u-turn requres an adjustment of the turn angles
     // therefore these are handled prior to this step
     for (std::size_t index = 2; index < intersection.size(); ++index)
     {
         if (CanMerge(intersection_node, intersection, index, getRight(index)))
         {
-            std::cout << "Merging at " << 2 << std::endl;
             intersection[getRight(index)] =
                 merge(intersection[getRight(index)], intersection[index]);
             intersection.erase(intersection.begin() + index);
