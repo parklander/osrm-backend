@@ -394,6 +394,7 @@ Intersection TurnHandler::assignRightTurns(const EdgeID via_edge,
         else if (2 >= (intersection[1].entry_allowed + intersection[2].entry_allowed +
                        intersection[3].entry_allowed))
         {
+            std::cout << "Conflicting Turns to the right" << std::endl;
             // at least a single invalid
             if (!intersection[3].entry_allowed)
             {
@@ -657,20 +658,20 @@ void TurnHandler::handleDistinctConflict(const EdgeID via_edge,
 
     if (getTurnDirection(left.turn.angle) == DirectionModifier::Right)
     {
-        if (angularDeviation(left.turn.angle, 90) > angularDeviation(right.turn.angle, 90))
-        {
-            left.turn.instruction = {left_type, DirectionModifier::SlightRight};
-            right.turn.instruction = {right_type, DirectionModifier::Right};
-        }
-        else
+        if (angularDeviation(left.turn.angle, 85) >= angularDeviation(right.turn.angle, 85))
         {
             left.turn.instruction = {left_type, DirectionModifier::Right};
             right.turn.instruction = {right_type, DirectionModifier::SharpRight};
         }
+        else
+        {
+            left.turn.instruction = {left_type, DirectionModifier::SlightRight};
+            right.turn.instruction = {right_type, DirectionModifier::Right};
+        }
     }
     else
     {
-        if (angularDeviation(left.turn.angle, 270) > angularDeviation(right.turn.angle, 270))
+        if (angularDeviation(left.turn.angle, 265) >= angularDeviation(right.turn.angle, 265))
         {
             left.turn.instruction = {left_type, DirectionModifier::SharpLeft};
             right.turn.instruction = {right_type, DirectionModifier::Left};

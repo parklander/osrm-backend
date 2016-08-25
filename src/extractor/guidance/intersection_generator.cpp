@@ -157,7 +157,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             angle = util::coordinate_calculation::computeAngle(
                 first_coordinate, turn_coordinate, third_coordinate);
 
-            if (angularDeviation(angle, compare_angle) > 40)
+            if (angularDeviation(angle, compare_angle) >= 10)
             {
                 std::cout << "Changed Angle from " << compare_angle << " to " << angle
                           << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
@@ -310,7 +310,12 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
                 angularDeviation(intersection[index].turn.angle,
                                  intersection[other_index].turn.angle);
 
-        return becomes_narrower;
+        const bool has_same_deviation =
+            std::abs(angularDeviation(intersection[index].turn.angle, STRAIGHT_ANGLE) -
+                     angularDeviation(intersection[other_index].turn.angle, STRAIGHT_ANGLE)) <
+            MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
+
+        return becomes_narrower || has_same_deviation;
     };
 
     // Only merge valid y-arms
@@ -500,12 +505,17 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
         intersection[0].entry_allowed = false;
     }
 
+    std::cout << "[intersection]\n";
+    for (auto road : intersection)
+        std::cout << "\t" << toString(road) << std::endl;
+
     // a merge including the first u-turn requres an adjustment of the turn angles
     // therefore these are handled prior to this step
     for (std::size_t index = 2; index < intersection.size(); ++index)
     {
         if (CanMerge(intersection_node, intersection, index, getRight(index)))
         {
+            std::cout << "Merging at " << 2 << std::endl;
             intersection[getRight(index)] =
                 merge(intersection[getRight(index)], intersection[index]);
             intersection.erase(intersection.begin() + index);
