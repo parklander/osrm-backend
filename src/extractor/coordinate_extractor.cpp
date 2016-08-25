@@ -250,11 +250,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
 
         for (std::size_t index = 2; index < coordinates.size(); ++index)
         {
-            std::cout << "Deviation: " << GetMaxDeviation(coordinates.begin(),
-                                coordinates.begin() + index,
-                                coordinates.front(),
-                                *(coordinates.begin() + index)) << std::endl;
-
             // check the deviation from a straight line
             if (GetMaxDeviation(coordinates.begin(),
                                 coordinates.begin() + index,
