@@ -376,6 +376,12 @@ bool bearingsAreReversed(const double bearing_in, const double bearing_out)
     return angularDeviation(left_turn_angle, 180) <= 35;
 }
 
+bool isLinkroad(const RouteStep &step)
+{
+    const constexpr double MAX_LINK_ROAD_LENGTH = 60.0;
+    return step.distance <= MAX_LINK_ROAD_LENGTH && step.name_id == EMPTY_NAMEID;
+}
+
 void collapseUTurn(std::vector<RouteStep> &steps,
                    const std::size_t two_back_index,
                    const std::size_t one_back_index,
@@ -385,7 +391,6 @@ void collapseUTurn(std::vector<RouteStep> &steps,
     BOOST_ASSERT(step_index < steps.size());
     BOOST_ASSERT(one_back_index < steps.size());
     const auto &current_step = steps[step_index];
-    const auto &one_back_step = steps[one_back_index];
     // the simple case is a u-turn that changes directly into the in-name again
     const bool direct_u_turn = steps[two_back_index].name_id == current_step.name_id;
 
@@ -424,6 +429,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                     const std::size_t one_back_index,
                     const std::size_t step_index)
 {
+    std::cout << "Collapsing at: " << step_index << std::endl;
     BOOST_ASSERT(step_index < steps.size());
     BOOST_ASSERT(one_back_index < steps.size());
     const auto &current_step = steps[step_index];
@@ -471,7 +477,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         }
     }
     // very short segment after turn
-    else if (one_back_step.distance <= MAX_COLLAPSE_DISTANCE &&
+    else if ((one_back_step.distance <= MAX_COLLAPSE_DISTANCE || isLinkroad(one_back_step)) &&
              isCollapsableInstruction(current_step.maneuver.instruction))
     {
         // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
