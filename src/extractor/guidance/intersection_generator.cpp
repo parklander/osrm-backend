@@ -300,13 +300,15 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
         const double distance_to_target = util::coordinate_calculation::haversineDistance(
             coordinate_at_intersection, coordinate_at_target);
 
+        /*
         const constexpr double MAX_COLLAPSE_DISTANCE = 30;
         if (distance_to_target < MAX_COLLAPSE_DISTANCE)
             return false;
+        */
 
         const bool becomes_narrower =
             angularDeviation(turn_angle, other_turn_angle) < NARROW_TURN_ANGLE &&
-            angularDeviation(turn_angle, other_turn_angle) <
+            angularDeviation(turn_angle, other_turn_angle) <=
                 angularDeviation(intersection[index].turn.angle,
                                  intersection[other_index].turn.angle);
 
@@ -318,6 +320,7 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
         return becomes_narrower || has_same_deviation;
     };
 
+    std::cout << "Y-Arms: " << (int)isValidYArm(first_index, second_index) << " " << (int)isValidYArm(second_index, first_index) << std::endl;
     // Only merge valid y-arms
     if (!isValidYArm(first_index, second_index) || !isValidYArm(second_index, first_index))
         return false;

@@ -314,6 +314,35 @@ Feature: Simple Turns
             | efb   | primary | road | 2     | yes    |
 
         When I route I should get
+            | waypoints | route     | turns         |
+            | a,d       | road,road | depart,arrive |
+            | e,a       | road,road | depart,arrive |
+
+    @todo
+    # currently the intersections don't match up do to the `merging` process
+    Scenario: Splitting Road with many lanes
+        Given the node map
+            |   |   |   |   |   |   |   |   |   | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | a |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   | c |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
+
+        And the ways
+            | nodes | highway | name | lanes | oneway |
+            | ab    | primary | road | 4     | no     |
+            | bcd   | primary | road | 2     | yes    |
+            | efb   | primary | road | 2     | yes    |
+
+        When I route I should get
             | waypoints | route     | turns         | intersections                                |
             | a,d       | road,road | depart,arrive | true:90,false:45 true:135 false:270;true:270 |
             | e,a       | road,road | depart,arrive | true:270,false:45 true:135 true:270;true:90  |
