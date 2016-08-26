@@ -273,8 +273,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         static std::set<util::Coordinate> examples;
         if (examples.count(turn_coordinate) == 0 && examples.size() < 20)
         {
-            std::cout << "SWT - " << straight_distance << " - " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
-                      << toFloating(turn_coordinate.lon) << std::endl;
+            std::cout << "SWT - " << straight_distance << " - " << std::setprecision(12)
+                      << toFloating(turn_coordinate.lat) << " " << toFloating(turn_coordinate.lon)
+                      << std::endl;
             examples.insert(turn_coordinate);
         }
         return TrimCoordinatesToLength(std::move(coordinates), 5).back();
@@ -346,9 +347,11 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         const util::Coordinate destination_coordinate =
             node_coordinates[traversed_in_reverse ? intersection_node : to_node];
         std::cout << "Coordinates: Full: " << count << "  Reduced: " << coordinates.size()
-                  << " Turn: " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
-                  << toFloating(turn_coordinate.lon) << " - " << toFloating(coordinates.back().lat)
-                  << " " << toFloating(coordinates.back().lon)
+                  << " Lanes: " << (int)number_of_from_lanes << " "
+                  << (int)number_of_turn_edge_lanes << " Turn: " << std::setprecision(12)
+                  << toFloating(turn_coordinate.lat) << " " << toFloating(turn_coordinate.lon)
+                  << " - " << toFloating(coordinates.back().lat) << " "
+                  << toFloating(coordinates.back().lon)
                   << " Regression: " << toFloating(destination_coordinate.lat) << " "
                   << toFloating(destination_coordinate.lon)
                   << " Regression: " << toFloating(regression_vector.first.lat) << " "
@@ -390,30 +393,30 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     //
     // Will be considered a very slight turn, instead of the near 90 degree turn we see right here.
     const auto total_distance =
-        std::accumulate(segment_distances.begin(), segment_distances.end(), 0);
+        std::accumulate(segment_distances.begin(), segment_distances.end(), 0.);
 
     const auto IsCloseToLaneDistance = [number_of_from_lanes,
                                         number_of_turn_edge_lanes](const double width) {
-        return (number_of_from_lanes != 0 || number_of_turn_edge_lanes != 0) &&
-               std::abs(width -
-                        (std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes) *
-                         0.5 * ASSUMED_LANE_WIDTH)) < 0.5 * ASSUMED_LANE_WIDTH;
+        const auto maximal_lane_offset =
+            (std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes) + 1) * 0.5 *
+            ASSUMED_LANE_WIDTH;
+        const auto minimal_lane_offset =
+            (std::min(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes)) * 0.5 *
+            ASSUMED_LANE_WIDTH;
+        std::cout << "Check: " << minimal_lane_offset << " " << width << " " << maximal_lane_offset
+                  << std::endl;
+        return minimal_lane_offset <= width && width <= maximal_lane_offset;
     };
 
     const bool first_vertex_is_close_enough =
         IsCloseToLaneDistance(segment_distances[1]) || IsCloseToLaneDistance(straight_distance);
 
-#if 0
-    std::cout << "Close Enough: " << segment_distances[1] << " "
-              << std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes) * 0.5 *
-                     ASSUMED_LANE_WIDTH
-              << " "
+    std::cout << "OC Check: " << first_vertex_is_close_enough << " TD: " << total_distance << " > "
+              << 0.8 * FAR_LOOKAHEAD_DISTANCE << "Deviation: "
               << GetMaxDeviation(
                      coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back())
               << std::endl;
-#endif
-
-    if (first_vertex_is_close_enough && total_distance > 0.9 * FAR_LOOKAHEAD_DISTANCE &&
+    if (first_vertex_is_close_enough && total_distance > 0.8 * FAR_LOOKAHEAD_DISTANCE &&
         0.5 * ASSUMED_LANE_WIDTH >
             GetMaxDeviation(
                 coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back()))
@@ -433,7 +436,8 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     }
 
     // detect curves: If we see many coordinates that follow a similar turn angle, we assume a curve
-    // TODO checkout http://www.openstreetmap.org/search?query=52.479264%2013.295617#map=19/52.47926/13.29562
+    // TODO checkout
+    // http://www.openstreetmap.org/search?query=52.479264%2013.295617#map=19/52.47926/13.29562
     const bool has_many_coordinates =
         coordinates.size() >= std::max(3, (int)(6 * (total_distance / FAR_LOOKAHEAD_DISTANCE)));
     const bool all_angles_are_similar = [&turn_angles]() {
@@ -640,8 +644,13 @@ CoordinateExtractor::GetCorrectedCoordinate(const util::Coordinate &fixpoint,
         //                   e
         //
         // for turn node `b`, vector_base `d` and vector_head `e`
-        const auto corrected_lon = vector_head.lon - vector_base.lon + fixpoint.lon;
-        const auto corrected_lat = vector_head.lat - vector_base.lat + fixpoint.lat;
+        const std::int32_t offset_percentage = 90;
+        const auto corrected_lon =
+            vector_head.lon -
+            util::FixedLongitude{offset_percentage * (int)(vector_base.lon - fixpoint.lon) / 100};
+        const auto corrected_lat =
+            vector_head.lat -
+            util::FixedLatitude{offset_percentage * (int)(vector_base.lat - fixpoint.lat) / 100};
 
         return util::Coordinate(corrected_lon, corrected_lat);
     }

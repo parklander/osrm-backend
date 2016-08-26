@@ -293,30 +293,30 @@ Feature: Simple Turns
 
     Scenario: Splitting Road with many lanes
         Given the node map
-            |   |   |   |   |   |   |   |   |   | f |   |   |   |   |   |   | e |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            | a |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   | c |   |   |   |   |   |   | d |
+            |   |   |   |   |   |   |   |   |   | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | a |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   | c |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
 
         And the ways
             | nodes | highway | name | lanes | oneway |
             | ab    | primary | road | 4     | no     |
             | bcd   | primary | road | 2     | yes    |
-            | feb   | primary | road | 2     | yes    |
+            | efb   | primary | road | 2     | yes    |
 
         When I route I should get
             | waypoints | route     | turns         | intersections                                |
-            | a,d       | road,road | depart,arrive | true:90,false:60 true:135 false:270;true:270 |
-            | e,a       | road,road | depart,arrive | true:270,false:60 true:135 true:270;true:90  |
+            | a,d       | road,road | depart,arrive | true:90,false:45 true:135 false:270;true:270 |
+            | e,a       | road,road | depart,arrive | true:270,false:45 true:135 true:270;true:90  |
 
 
     #http://www.openstreetmap.org/#map=19/52.54759/13.43929
