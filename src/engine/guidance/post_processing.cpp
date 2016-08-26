@@ -382,6 +382,53 @@ bool isLinkroad(const RouteStep &step)
     return step.distance <= MAX_LINK_ROAD_LENGTH && step.name_id == EMPTY_NAMEID;
 }
 
+double findTotalTurnAngle(const RouteStep &one_back_step, const RouteStep &current_step)
+{
+    const auto exit_intersection = current_step.intersections.front();
+    const auto current_step_exit_bearing = exit_intersection.bearings[exit_intersection.out];
+    const auto current_step_entry_bearing =
+        util::bearing::reverseBearing(exit_intersection.bearings[exit_intersection.in]);
+
+    const auto entry_intersection = one_back_step.intersections.front();
+    const auto one_back_step_entry_bearing =
+        util::bearing::reverseBearing(entry_intersection.bearings[entry_intersection.in]);
+    const auto one_back_step_exit_bearing = entry_intersection.bearings[entry_intersection.out];
+
+    const auto current_angle = turn_angle(current_step_entry_bearing, current_step_exit_bearing);
+    const auto one_back_angle = turn_angle(one_back_step_entry_bearing, one_back_step_exit_bearing);
+
+    if ((one_back_angle < 180 && current_angle < 180) ||
+        (one_back_angle > 180 && current_angle > 180))
+    {
+        // both angles are in the same direction, the total turn gets increased
+        //
+        // a ---- b
+        //           \
+        //              c
+        //              |
+        //              d
+        //
+        // Will be considered just like
+        // a -----b
+        //        |
+        //        c
+        //        |
+        //        d
+        const double total_angle =
+            turn_angle(one_back_step_entry_bearing, current_step_exit_bearing);
+        return total_angle;
+    }
+    else
+    {
+        // to prevent ignoring angles like
+        // a -- b
+        //      |
+        //      c -- d
+        // We don't combine both turn angles here but keep the very first turn angle
+        return one_back_angle;
+    }
+}
+
 void collapseUTurn(std::vector<RouteStep> &steps,
                    const std::size_t two_back_index,
                    const std::size_t one_back_index,
@@ -507,16 +554,25 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                     DirectionModifier::UTurn;
             }
         }
-        else if (TurnType::Merge == one_back_step.maneuver.instruction.type &&
-                 current_step.maneuver.instruction.type !=
-                     TurnType::Suppressed) // This suppressed is a check for highways. We might
-                                           // need a highway-suppressed to get the turn onto a
-                                           // highway...
+
+        if (TurnType::Merge == one_back_step.maneuver.instruction.type &&
+            current_step.maneuver.instruction.type !=
+                TurnType::Suppressed) // This suppressed is a check for highways. We might
+                                      // need a highway-suppressed to get the turn onto a
+                                      // highway...
         {
             steps[one_back_index].maneuver.instruction.direction_modifier =
                 util::guidance::mirrorDirectionModifier(
                     steps[one_back_index].maneuver.instruction.direction_modifier);
         }
+        //on non merge-types, we check for a combined turn angle
+        else if( TurnType::Merge != one_back_step.maneuver.instruction.type )
+        {
+            const auto combined_angle = findTotalTurnAngle(one_back_step, current_step);
+            steps[one_back_index].maneuver.instruction.direction_modifier =
+                getTurnDirection(combined_angle);
+        }
+
         steps[one_back_index].name = current_step.name;
         steps[one_back_index].name_id = current_step.name_id;
         invalidateStep(steps[step_index]);
@@ -771,14 +827,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
                     steps[one_back_index].name_id = steps[step_index].name_id;
                     steps[one_back_index].name = steps[step_index].name;
 
-                    const auto exit_intersection = steps[step_index].intersections.front();
-                    const auto exit_bearing = exit_intersection.bearings[exit_intersection.out];
-
-                    const auto entry_intersection = steps[one_back_index].intersections.front();
-                    const auto entry_bearing = entry_intersection.bearings[entry_intersection.in];
-
-                    const double angle =
-                        turn_angle(util::bearing::reverseBearing(entry_bearing), exit_bearing);
+                    const auto angle = findTotalTurnAngle(one_back_step, current_step);
                     steps[one_back_index].maneuver.instruction.direction_modifier =
                         ::osrm::util::guidance::getTurnDirection(angle);
                     invalidateStep(steps[step_index]);
