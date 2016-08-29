@@ -469,8 +469,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         }();
 
         printStatus();
-        std::cout << "Offset Index: " << offset_index << " For "
-                  << (maximal_lane_offset + ASSUMED_LANE_WIDTH) << std::endl;
         // at least two coordinates left and passed at least two coordinates
         if (offset_index <= 1 || offset_index + 1 >= coordinates.size())
             return coordinates.size();
@@ -479,7 +477,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                                              coordinates.end(),
                                                              *(coordinates.begin() + offset_index),
                                                              coordinates.back());
-        std::cout << "Deviation from straight: " << deviation_from_straight << std::endl;
         // remaining part of road is straight
         if (deviation_from_straight < 0.25 * ASSUMED_LANE_WIDTH)
             return offset_index;

@@ -439,9 +439,9 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
         // a -- b
         //      |
         //      c -- d
-        // We don't combine both turn angles here but keep the very first turn angle
-        return angularDeviation(entry_angle, 180) > angularDeviation(exit_angle, 180) ? entry_angle
-                                                                                      : exit_angle;
+        // We don't combine both turn angles here but keep the very first turn angle.
+        // We choose the first one, since we consider the first maneuver in a merge range the important one
+        return entry_angle;
     }
 }
 
@@ -548,6 +548,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
              isCollapsableInstruction(current_step.maneuver.instruction) &&
              compatible(one_back_step, current_step))
     {
+        std::cout << "Second" << std::endl;
         // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
         steps[one_back_index] = elongate(std::move(steps[one_back_index]), steps[step_index]);
         if ((TurnType::Continue == one_back_step.maneuver.instruction.type ||
@@ -590,6 +591,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         else if (TurnType::Merge != one_back_step.maneuver.instruction.type)
         {
             const auto combined_angle = findTotalTurnAngle(one_back_step, current_step);
+            std::cout << "Found total turn angle: " << combined_angle << std::endl;
             steps[one_back_index].maneuver.instruction.direction_modifier =
                 getTurnDirection(combined_angle);
         }
