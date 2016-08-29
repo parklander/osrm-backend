@@ -1,5 +1,5 @@
-#include "extractor/coordinate_extractor.hpp"
 #include "extractor/guidance/constants.hpp"
+#include "extractor/guidance/coordinate_extractor.hpp"
 #include "extractor/guidance/toolkit.hpp"
 
 #include <algorithm>
@@ -10,16 +10,20 @@
 #include <numeric>
 #include <utility>
 
+#include <set> //TODO remove
+
 namespace osrm
 {
 namespace extractor
 {
+namespace guidance
+{
+
 namespace
 {
 // to use the corrected coordinate, we require it to be at least a bit further down the
 // road than the offset coordinate. We postulate a minimum Distance of 2 Meters
 const constexpr double DESIRED_COORDINATE_DIFFERENCE = 2.0;
-const constexpr double LOOKAHEAD_DISTANCE = 2.5;
 // the default distance we lookahead on a road. This distance prevents small mapping
 // errors to impact the turn angles.
 const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
@@ -73,9 +77,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // is. Simply return the final coordinate. Turn angles/turn vectors are the same no matter which
     // coordinate we look at.
     if (coordinates.size() == 2)
-    {
         return coordinates.back();
-    }
 
     // Our very first step trims the coordinates to the FAR_LOOKAHEAD_DISTANCE. The idea here is to
     // filter all coordinates at the end of the road and consider only the form close to the
@@ -96,6 +98,23 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // valid way. Only curved roads and other difficult scenarios will require multiple coordinates.
     if (coordinates.size() == 2)
         return coordinates.back();
+
+    const auto &turn_edge_data = node_based_graph.GetEdgeData(turn_edge);
+    const util::Coordinate turn_coordinate =
+        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
+    // Low priority roads are usually modelled very strangely. The roads are so small, though, that
+    // our basic heuristic looking at the road should be fine.
+    if (turn_edge_data.road_classification.IsLowPriorityRoadClass())
+    {
+        static std::set<util::Coordinate> examples;
+        if (examples.count(turn_coordinate) == 0 && examples.size() < 20)
+        {
+            std::cout << "LPRC " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
+                      << toFloating(turn_coordinate.lon) << std::endl;
+            examples.insert(turn_coordinate);
+        }
+        return TrimCoordinatesToLength(std::move(coordinates), 5).back();
+    }
 
     // The coordinates along the road are in different distances from the source. If only very few
     // coordinates are close to the intersection, It might just be we simply looked to far down the
@@ -123,8 +142,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return segment_distances;
     }();
 
-    const util::Coordinate turn_coordinate =
-        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
     // if the very first coordinate along the road is reasonably far away from the road, we assume
     // the coordinate to correctly represent the turn. This could probably be improved using
     // information on the very first turn angle (requires knowledge about previous road) and the
@@ -179,7 +196,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return deviation;
     };
 
-    const auto &turn_edge_data = node_based_graph.GetEdgeData(turn_edge);
     const auto number_of_turn_edge_lanes = turn_edge_data.road_classification.GetNumberOfLanes();
 
     // We use the sum of least squares to calculate a linear regression through our coordinates.
@@ -468,7 +484,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             return segment_distances.size();
         }();
 
-        printStatus();
         // at least two coordinates left and passed at least two coordinates
         if (offset_index <= 1 || offset_index + 1 >= coordinates.size())
             return coordinates.size();
@@ -500,10 +515,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     }
 
     // detect curves: If we see many coordinates that follow a similar turn angle, we assume a curve
-    // TODO checkout
-    // http://www.openstreetmap.org/search?query=52.479264%2013.295617#map=19/52.47926/13.29562
     const bool has_many_coordinates =
-        coordinates.size() >= std::max(3, (int)(6 * (total_distance / FAR_LOOKAHEAD_DISTANCE)));
+        coordinates.size() >=
+        static_cast<std::size_t>(std::max(3, (int)(6 * (total_distance / FAR_LOOKAHEAD_DISTANCE))));
     const bool all_angles_are_similar = [&turn_angles]() {
         for (std::size_t i = 1; i < turn_angles.size(); ++i)
         {
@@ -720,5 +734,6 @@ CoordinateExtractor::GetCorrectedCoordinate(const util::Coordinate &fixpoint,
     }
 };
 
-} // namespace osm
+} // namespace guidance
+} // namespace extractor
 } // namespace osrm

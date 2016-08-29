@@ -746,3 +746,85 @@ Feature: Collapse
         When I route I should get
             | waypoints | route               | turns                          |
             | d,c       | first,first,first   | depart,continue uturn,arrive   |
+
+    #http://www.openstreetmap.org/#map=19/52.48778/13.30024
+    Scenario: Hohenzollerdammbrücke
+        Given the node map
+            |   |   |   | q |   |   |   |   |   | s |   |   |   |
+            |   |   |   | p |   |   |   |   |   | o |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | j |   | i |   |   |   | h |   |   |   | g |   | f |
+            |   |   |   |   | k |   |   |   | l |   |   |   |   |
+            | a |   | b |   |   |   | c |   |   |   | d |   | e |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   | m |   |   |   |   |   | n |   |   |   |
+            |   |   |   | t |   |   |   |   |   | r |   |   |   |
+
+        And the ways
+            | nodes | highway       | name        | oneway |
+            | ab    | secondary     | hohe        | yes    |
+            | bc    | secondary     | hohebruecke | yes    |
+            | cd    | secondary     | hohebruecke | yes    |
+            | bk    | secondary     | hohebruecke | yes    |
+            | kh    | secondary     | hohebruecke | yes    |
+            | ki    | secondary     | hohebruecke | yes    |
+            | ck    | secondary     | hohebruecke | yes    |
+            | de    | secondary     | hohe        | yes    |
+            | fg    | secondary     | hohe        | yes    |
+            | gh    | secondary     | hohebruecke | yes    |
+            | hi    | secondary     | hohebruecke | yes    |
+            | gl    | secondary     | hohebruecke | yes    |
+            | lc    | secondary     | hohebruecke | yes    |
+            | hl    | secondary     | hohebruecke | yes    |
+            | ld    | secondary     | hohebruecke | yes    |
+            | ij    | secondary     | hohe        | yes    |
+            | bm    | motorway_link | a100        | yes    |
+            | cm    | motorway_link | a100        | yes    |
+            | nc    | motorway_link | a100        | yes    |
+            | nd    | motorway_link | a100        | yes    |
+            | go    | motorway_link | a100        | yes    |
+            | ho    | motorway_link | a100        | yes    |
+            | ph    | motorway_link | a100        | yes    |
+            | pi    | motorway_link | a100        | yes    |
+            | qp    | motorway_link | a100        | yes    |
+            | mt    | motorway_link | a100        | yes    |
+            | rn    | motorway_link | a100        | yes    |
+            | os    | motorway_link | a100        | yes    |
+
+        And the relations
+            | type        | way:from | way:to | node:via | restriction   |
+            | restriction | ck       | kh     | k        | no_right_turn |
+            | restriction | bk       | ki     | k        | no_left_turn  |
+            | restriction | hl       | lc     | l        | no_right_turn |
+            | restriction | gl       | ld     | l        | no_left_turn  |
+            | restriction | bc       | cm     | c        | no_right_turn |
+            | restriction | bc       | ck     | c        | no_left_turn  |
+            | restriction | nc       | cm     | c        | no_left_turn  |
+            | restriction | nc       | cd     | c        | no_right_turn |
+            | restriction | lc       | ck     | c        | no_left_turn  |
+            | restriction | lc       | cd     | c        | no_right_turn |
+            | restriction | gh       | ho     | h        | no_right_turn |
+            | restriction | gh       | hl     | h        | no_left_turn  |
+            | restriction | kh       | hi     | h        | no_left_turn  |
+            | restriction | kh       | hl     | h        | no_right_turn |
+            | restriction | ph       | ho     | h        | no_left_turn  |
+            | restriction | ph       | hi     | h        | no_right_turn |
+
+        When I route I should get
+            | waypoints | route                      | turns                                      |
+            | a,e       | hohe,hohe                  | depart,arrive                              |
+            | a,s       | hohe,a100,a100             | depart,on ramp left,arrive                 |
+            | a,t       | hohe,a100,a100             | depart,on ramp right,arrive                |
+            | a,j       |                            |                                            |
+            | f,j       | hohe,hohe                  | depart,arrive                              |
+            | a,s       | hohe,a100,a100             | depart,on ramp left,arrive                 |
+            | a,t       | hohe,a100,a100             | depart,on ramp right,arrive                |
+            | a,e       |                            |                                            |
+            | q,j       | a100,a100,hohe,hohe        | depart,fork slight right,turn right,arrive |
+            | q,e       | a100,a100,hohebruecke,hohe | depart,fork slight left, turn left,arrive  |

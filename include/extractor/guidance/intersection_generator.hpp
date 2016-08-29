@@ -2,7 +2,7 @@
 #define OSRM_EXTRACTOR_GUIDANCE_INTERSECTION_GENERATOR_HPP_
 
 #include "extractor/compressed_edge_container.hpp"
-#include "extractor/coordinate_extractor.hpp"
+#include "extractor/guidance/coordinate_extractor.hpp"
 #include "extractor/guidance/intersection.hpp"
 #include "extractor/query_node.hpp"
 #include "extractor/restriction_map.hpp"

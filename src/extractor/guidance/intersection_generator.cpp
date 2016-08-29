@@ -1,4 +1,4 @@
-#include <iomanip>
+#include <iomanip> // TODO REMOVE
 
 #include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/intersection_generator.hpp"
@@ -157,13 +157,17 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             angle = util::coordinate_calculation::computeAngle(
                 first_coordinate, turn_coordinate, third_coordinate);
 
-            if (angularDeviation(angle, compare_angle) >= 10)
+            static std::set<util::Coordinate> cases;
+            if (angularDeviation(angle, compare_angle) >= 20)
             {
                 std::cout << "Changed Angle from " << compare_angle << " to " << angle
                           << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
                           << " " << toFloating(turn_coordinate.lon) << std::endl;
-
-                print = true;
+                if (cases.count(turn_coordinate) == 0)
+                {
+                    print = true;
+                    cases.insert(turn_coordinate);
+                }
             }
             if (std::abs(angle) < std::numeric_limits<double>::epsilon())
                 has_uturn_edge = true;
@@ -297,14 +301,6 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
             coordinate_at_in_edge, coordinate_at_intersection, coordinate_at_target);
         const auto other_turn_angle = util::coordinate_calculation::computeAngle(
             coordinate_at_in_edge, coordinate_at_intersection, coordinate_at_other_target);
-        const double distance_to_target = util::coordinate_calculation::haversineDistance(
-            coordinate_at_intersection, coordinate_at_target);
-
-        /*
-        const constexpr double MAX_COLLAPSE_DISTANCE = 30;
-        if (distance_to_target < MAX_COLLAPSE_DISTANCE)
-            return false;
-        */
 
         const bool becomes_narrower =
             angularDeviation(turn_angle, other_turn_angle) < NARROW_TURN_ANGLE &&
@@ -320,7 +316,6 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
         return becomes_narrower || has_same_deviation;
     };
 
-    std::cout << "Y-Arms: " << (int)isValidYArm(first_index, second_index) << " " << (int)isValidYArm(second_index, first_index) << std::endl;
     // Only merge valid y-arms
     if (!isValidYArm(first_index, second_index) || !isValidYArm(second_index, first_index))
         return false;
