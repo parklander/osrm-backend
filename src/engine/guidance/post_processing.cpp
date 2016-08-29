@@ -382,23 +382,23 @@ bool isLinkroad(const RouteStep &step)
     return step.distance <= MAX_LINK_ROAD_LENGTH && step.name_id == EMPTY_NAMEID;
 }
 
-double findTotalTurnAngle(const RouteStep &one_back_step, const RouteStep &current_step)
+double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_step)
 {
-    const auto exit_intersection = current_step.intersections.front();
-    const auto current_step_exit_bearing = exit_intersection.bearings[exit_intersection.out];
-    const auto current_step_entry_bearing =
+    const auto exit_intersection = exit_step.intersections.front();
+    const auto exit_step_exit_bearing = exit_intersection.bearings[exit_intersection.out];
+    const auto exit_step_entry_bearing =
         util::bearing::reverseBearing(exit_intersection.bearings[exit_intersection.in]);
 
-    const auto entry_intersection = one_back_step.intersections.front();
-    const auto one_back_step_entry_bearing =
+    const auto entry_intersection = entry_step.intersections.front();
+    const auto entry_step_entry_bearing =
         util::bearing::reverseBearing(entry_intersection.bearings[entry_intersection.in]);
-    const auto one_back_step_exit_bearing = entry_intersection.bearings[entry_intersection.out];
+    const auto entry_step_exit_bearing = entry_intersection.bearings[entry_intersection.out];
 
-    const auto current_angle = turn_angle(current_step_entry_bearing, current_step_exit_bearing);
-    const auto one_back_angle = turn_angle(one_back_step_entry_bearing, one_back_step_exit_bearing);
+    const auto exit_angle = turn_angle(exit_step_entry_bearing, exit_step_exit_bearing);
+    const auto entry_angle = turn_angle(entry_step_entry_bearing, entry_step_exit_bearing);
 
-    if ((one_back_angle < 180 && current_angle < 180) ||
-        (one_back_angle > 180 && current_angle > 180))
+    // We allow for minor deviations from a straight line
+    if ((entry_angle <= 185 && exit_angle <= 185) || (entry_angle >= 175 && exit_angle >= 175))
     {
         // both angles are in the same direction, the total turn gets increased
         //
@@ -414,8 +414,7 @@ double findTotalTurnAngle(const RouteStep &one_back_step, const RouteStep &curre
         //        c
         //        |
         //        d
-        const double total_angle =
-            turn_angle(one_back_step_entry_bearing, current_step_exit_bearing);
+        const double total_angle = turn_angle(entry_step_entry_bearing, exit_step_exit_bearing);
         return total_angle;
     }
     else
@@ -425,7 +424,8 @@ double findTotalTurnAngle(const RouteStep &one_back_step, const RouteStep &curre
         //      |
         //      c -- d
         // We don't combine both turn angles here but keep the very first turn angle
-        return one_back_angle;
+        return angularDeviation(entry_angle, 180) > angularDeviation(exit_angle, 180) ? entry_angle
+                                                                                      : exit_angle;
     }
 }
 
@@ -565,8 +565,8 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                 util::guidance::mirrorDirectionModifier(
                     steps[one_back_index].maneuver.instruction.direction_modifier);
         }
-        //on non merge-types, we check for a combined turn angle
-        else if( TurnType::Merge != one_back_step.maneuver.instruction.type )
+        // on non merge-types, we check for a combined turn angle
+        else if (TurnType::Merge != one_back_step.maneuver.instruction.type)
         {
             const auto combined_angle = findTotalTurnAngle(one_back_step, current_step);
             steps[one_back_index].maneuver.instruction.direction_modifier =
