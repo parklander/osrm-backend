@@ -382,6 +382,22 @@ bool isLinkroad(const RouteStep &step)
     return step.distance <= MAX_LINK_ROAD_LENGTH && step.name_id == EMPTY_NAMEID;
 }
 
+bool isUTurn(const RouteStep &in_step, const RouteStep &out_step, const RouteStep &pre_in_step)
+{
+    const bool is_possible_candidate = in_step.distance <= MAX_COLLAPSE_DISTANCE ||
+                                       choiceless(out_step, in_step) ||
+                                       (isLinkroad(in_step) && out_step.name_id != EMPTY_NAMEID &&
+                                        pre_in_step.name_id == out_step.name_id);
+
+    const bool takes_u_turn = bearingsAreReversed(
+        util::bearing::reverseBearing(
+            in_step.intersections.front().bearings[in_step.intersections.front().in]),
+        out_step.intersections.front().bearings[out_step.intersections.front().out]);
+    std::cout << "Check U-Turn: " << is_possible_candidate << " " << takes_u_turn
+              << " Comp: " << compatible(in_step, out_step) << std::endl;
+    return is_possible_candidate && takes_u_turn && compatible(in_step, out_step);
+}
+
 double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_step)
 {
     const auto exit_intersection = exit_step.intersections.front();
@@ -476,6 +492,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                     const std::size_t one_back_index,
                     const std::size_t step_index)
 {
+    std::cout << "Trying to collapse turn." << std::endl;
     BOOST_ASSERT(step_index < steps.size());
     BOOST_ASSERT(one_back_index < steps.size());
     const auto &current_step = steps[step_index];
@@ -495,7 +512,11 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
     // the check against merge is a workaround for motorways
     {
         BOOST_ASSERT(two_back_index < steps.size());
-        if (compatible(one_back_step, steps[two_back_index]))
+        if (isUTurn(one_back_step, current_step, steps[two_back_index]))
+        {
+            collapseUTurn(steps, two_back_index, one_back_index, step_index);
+        }
+        else if (compatible(one_back_step, steps[two_back_index]))
         {
             BOOST_ASSERT(!one_back_step.intersections.empty());
             if (TurnType::Continue == current_step.maneuver.instruction.type ||
@@ -578,16 +599,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         invalidateStep(steps[step_index]);
     }
     // Potential U-Turn
-    else if ((one_back_step.distance <= MAX_COLLAPSE_DISTANCE ||
-              choiceless(current_step, one_back_step) ||
-              (isLinkroad(one_back_step) && current_step.name_id != EMPTY_NAMEID &&
-               steps[two_back_index].name_id == current_step.name_id)) &&
-             bearingsAreReversed(util::bearing::reverseBearing(
-                                     one_back_step.intersections.front()
-                                         .bearings[one_back_step.intersections.front().in]),
-                                 current_step.intersections.front()
-                                     .bearings[current_step.intersections.front().out]) &&
-             compatible(one_back_step, current_step))
+    else if (isUTurn(one_back_step, current_step, steps[two_back_index]))
     {
         collapseUTurn(steps, two_back_index, one_back_index, step_index);
     }
@@ -776,6 +788,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
     // first and last instructions are waypoints that cannot be collapsed
     for (std::size_t step_index = 1; step_index + 1 < steps.size(); ++step_index)
     {
+        std::cout << "Step: " << step_index << std::endl;
         const auto &current_step = steps[step_index];
         const auto next_step_index = step_index + 1;
         if (current_step.maneuver.instruction.type == TurnType::NoTurn)
@@ -923,14 +936,7 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
             collapseTurnAt(steps, two_back_index, one_back_index, step_index);
         }
         else if (one_back_index > 0 &&
-                 (current_step.name_id != EMPTY_NAMEID && isLinkroad(one_back_step) &&
-                  steps[getPreviousIndex(one_back_index)].name_id == current_step.name_id) &&
-                 bearingsAreReversed(util::bearing::reverseBearing(
-                                         one_back_step.intersections.front()
-                                             .bearings[one_back_step.intersections.front().in]),
-                                     current_step.intersections.front()
-                                         .bearings[current_step.intersections.front().out]) &&
-                 compatible(one_back_step, current_step))
+                 isUTurn(one_back_step, current_step, steps[getPreviousIndex(one_back_index)]))
         {
             collapseUTurn(steps, getPreviousIndex(one_back_index), one_back_index, step_index);
         }

@@ -403,23 +403,20 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         const auto minimal_lane_offset =
             (std::min(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes)) * 0.5 *
             ASSUMED_LANE_WIDTH;
-        std::cout << "Check: " << minimal_lane_offset << " " << width << " " << maximal_lane_offset
-                  << std::endl;
         return minimal_lane_offset <= width && width <= maximal_lane_offset;
     };
 
     const bool first_vertex_is_close_enough =
         IsCloseToLaneDistance(segment_distances[1]) || IsCloseToLaneDistance(straight_distance);
 
-    std::cout << "OC Check: " << first_vertex_is_close_enough << " TD: " << total_distance << " > "
-              << 0.8 * FAR_LOOKAHEAD_DISTANCE << "Deviation: "
-              << GetMaxDeviation(
-                     coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back())
-              << std::endl;
-    if (first_vertex_is_close_enough && total_distance > 0.8 * FAR_LOOKAHEAD_DISTANCE &&
+    // Check whether the very first coordinate is simply an offset. This is the case if the initial
+    // vertex is close to the turn and the remaining coordinates are nearly straight.
+    const bool is_direct_offset =
+        first_vertex_is_close_enough && total_distance > 0.8 * FAR_LOOKAHEAD_DISTANCE &&
         0.5 * ASSUMED_LANE_WIDTH >
             GetMaxDeviation(
-                coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back()))
+                coordinates.begin() + 1, coordinates.end(), coordinates[1], coordinates.back());
+    if (is_direct_offset)
     {
         // could be too agressive? Depend on lanes to check how far we want to go out?
         // compare
@@ -433,6 +430,76 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         }
         // TODO get correct index to consider in case of straight_distance
         return GetCorrectedCoordinate(turn_coordinate, coordinates[1], coordinates[2]);
+    }
+
+    // offsets can occur in curved turns as well, though here we have to offset at a coordinate down
+    // the road, index will be equal to coordinates.size() if the turn is not passing the test
+    const std::size_t curved_offset_index = [&]() {
+        const auto maximal_lane_offset =
+            (std::max(number_of_from_lanes, (std::uint16_t)number_of_turn_edge_lanes)) * 0.5 *
+            ASSUMED_LANE_WIDTH;
+
+        // distance has to be long enough to even check
+        if (total_distance < 3 * maximal_lane_offset)
+            return coordinates.size();
+
+        const auto offset_index = [segment_distances,
+                                   number_of_from_lanes,
+                                   number_of_turn_edge_lanes,
+                                   maximal_lane_offset,
+                                   straight_distance]() {
+            double current_segment_distance = 0;
+
+            for (std::size_t i = 0; i + 1 < segment_distances.size(); ++i)
+            {
+                if (current_segment_distance + segment_distances[i + 1] <
+                    1.5 * (maximal_lane_offset + ASSUMED_LANE_WIDTH))
+                {
+                    current_segment_distance += segment_distances[i + 1];
+                }
+                else
+                {
+                    if (current_segment_distance > straight_distance)
+                        return i;
+                    else
+                        return segment_distances.size();
+                }
+            }
+            return segment_distances.size();
+        }();
+
+        printStatus();
+        std::cout << "Offset Index: " << offset_index << " For "
+                  << (maximal_lane_offset + ASSUMED_LANE_WIDTH) << std::endl;
+        // at least two coordinates left and passed at least two coordinates
+        if (offset_index <= 1 || offset_index + 1 >= coordinates.size())
+            return coordinates.size();
+
+        const auto deviation_from_straight = GetMaxDeviation(coordinates.begin() + offset_index,
+                                                             coordinates.end(),
+                                                             *(coordinates.begin() + offset_index),
+                                                             coordinates.back());
+        std::cout << "Deviation from straight: " << deviation_from_straight << std::endl;
+        // remaining part of road is straight
+        if (deviation_from_straight < 0.25 * ASSUMED_LANE_WIDTH)
+            return offset_index;
+        else
+            return coordinates.size();
+    }();
+
+    if (curved_offset_index + 1 < coordinates.size())
+    {
+        static std::set<util::Coordinate> examples;
+        if (examples.count(turn_coordinate) == 0 && examples.size() < 20)
+        {
+            std::cout << "COC " << std::setprecision(12) << toFloating(turn_coordinate.lat) << " "
+                      << toFloating(turn_coordinate.lon) << std::endl;
+            examples.insert(turn_coordinate);
+        }
+        // TODO get correct index to consider in case of straight_distance
+        return GetCorrectedCoordinate(turn_coordinate,
+                                      coordinates[curved_offset_index],
+                                      coordinates[curved_offset_index + 1]);
     }
 
     // detect curves: If we see many coordinates that follow a similar turn angle, we assume a curve
