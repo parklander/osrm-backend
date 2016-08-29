@@ -1,5 +1,3 @@
-#include "util/debug.hpp"
-
 #include "extractor/guidance/turn_instruction.hpp"
 #include "engine/guidance/post_processing.hpp"
 
@@ -393,8 +391,6 @@ bool isUTurn(const RouteStep &in_step, const RouteStep &out_step, const RouteSte
         util::bearing::reverseBearing(
             in_step.intersections.front().bearings[in_step.intersections.front().in]),
         out_step.intersections.front().bearings[out_step.intersections.front().out]);
-    std::cout << "Check U-Turn: " << is_possible_candidate << " " << takes_u_turn
-              << " Comp: " << compatible(in_step, out_step) << std::endl;
     return is_possible_candidate && takes_u_turn && compatible(in_step, out_step);
 }
 
@@ -492,7 +488,6 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
                     const std::size_t one_back_index,
                     const std::size_t step_index)
 {
-    std::cout << "Trying to collapse turn." << std::endl;
     BOOST_ASSERT(step_index < steps.size());
     BOOST_ASSERT(one_back_index < steps.size());
     const auto &current_step = steps[step_index];
@@ -548,7 +543,6 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
              isCollapsableInstruction(current_step.maneuver.instruction) &&
              compatible(one_back_step, current_step))
     {
-        std::cout << "Second" << std::endl;
         // TODO check for lanes (https://github.com/Project-OSRM/osrm-backend/issues/2553)
         steps[one_back_index] = elongate(std::move(steps[one_back_index]), steps[step_index]);
         if ((TurnType::Continue == one_back_step.maneuver.instruction.type ||
@@ -591,7 +585,6 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
         else if (TurnType::Merge != one_back_step.maneuver.instruction.type)
         {
             const auto combined_angle = findTotalTurnAngle(one_back_step, current_step);
-            std::cout << "Found total turn angle: " << combined_angle << std::endl;
             steps[one_back_index].maneuver.instruction.direction_modifier =
                 getTurnDirection(combined_angle);
         }
@@ -749,7 +742,6 @@ std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
 // Post Processing to collapse unnecessary sets of combined instructions into a single one
 std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
 {
-    util::guidance::print(steps);
     if (steps.size() <= 2)
         return steps;
 
@@ -790,7 +782,6 @@ std::vector<RouteStep> collapseTurns(std::vector<RouteStep> steps)
     // first and last instructions are waypoints that cannot be collapsed
     for (std::size_t step_index = 1; step_index + 1 < steps.size(); ++step_index)
     {
-        std::cout << "Step: " << step_index << std::endl;
         const auto &current_step = steps[step_index];
         const auto next_step_index = step_index + 1;
         if (current_step.maneuver.instruction.type == TurnType::NoTurn)
