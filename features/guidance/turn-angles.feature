@@ -237,63 +237,6 @@ Feature: Simple Turns
             | waypoints | route               | turns                                         | intersections                                                          |
             | a,p       | road,road,road      | depart,roundabout turn straight exit-1,arrive | true:90;false:0 true:150 false:270,true:90 false:195 true:330;true:270 |
 
-
-    #http://www.openstreetmap.org/#map=19/52.47587/13.53600
-    Scenario: Curved Turn
-        Given the node map
-            | i |   | a |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   | c |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | h |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | f |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | g |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | j |
-
-        And the ways
-            | nodes | highway     | name   | lanes |
-            | iabcd | residential | first  | 1     |
-            | defgj | residential | second | 1     |
-            | dh    | residential | turn   | 1     |
-
-        When I route I should get
-            | waypoints | route               | turns                           |
-            | a,g       | first,second,second | depart,new name straight,arrive |
-            | a,h       | first,turn,turn     | depart,turn left,arrive         |
-            | g,h       | second,turn,turn    | depart,turn right,arrive        |
-            | g,a       | second,first,first  | depart,new name straight,arrive |
-
     Scenario: Splitting Road with many lanes
         Given the node map
             |   |   |   |   |   |   |   |   |   | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |
@@ -432,20 +375,14 @@ Feature: Simple Turns
             | g,l       | turn,turn,turn | depart,continue uturn,arrive |
             | g,c       | turn,road,road | depart,turn left,arrive      |
 
+    #http://www.openstreetmap.org/#map=19/52.47587/13.53600
     Scenario: Curved Turn
         Given the node map
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            | f |   |   |   |   | e |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
-            |   |   |   |   |   |   |   |   | l |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   | k |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | f |   |   |   |   |   |   |   |   |   | e |   |   |   |   |   |   |   |   |   | d |
+            |   |   |   |   |   |   |   |   |   |   |   |   | l |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   | k |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | j |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -453,8 +390,11 @@ Feature: Simple Turns
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | h |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
             |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -479,6 +419,6 @@ Feature: Simple Turns
             | ef      | residential  | road | 2     | yes    |
 
        When I route I should get
-            | waypoints | route               | turns                              | intersections |
-            | g,f       | turn,road,road      | depart,turn left,arrive            | |
-            | c,f       | road,turn,road,road | depart,turn right,turn left,arrive | |
+            | waypoints | route               | turns                              |
+            | g,f       | turn,road,road      | depart,turn left,arrive            |
+            | c,f       | road,turn,road,road | depart,turn right,turn left,arrive |
