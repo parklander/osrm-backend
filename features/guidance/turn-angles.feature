@@ -513,3 +513,5 @@ Feature: Simple Turns
 
     #Invalid coc
     #http://www.openstreetmap.org/#map=19/52.53500/13.19798
+
+    #invalid uturn: http://www.openstreetmap.org/#map=19/52.50522/13.34076
