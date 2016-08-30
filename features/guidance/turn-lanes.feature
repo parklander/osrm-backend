@@ -883,3 +883,24 @@ Feature: Turn Lane Guidance
             | a,c       | in,left,left       | depart,turn left,arrive         | ,left:true straight:false right;uturn:false, |
             | a,d       | in,through,through | depart,new name straight,arrive | ,left:false straight:true right;uturn:false, |
             | a,e       | in,right,right     | depart,turn right,arrive        | ,left:false straight:false right;uturn:true, |
+
+    Scenario: Reverse Not Allowed
+        Given the node map
+            |   |   |   |   |   |   | n | o |   |
+            | f |   |   | e |   |   | g | j | m |
+            |   |   |   |   | d |   |   |   |   |
+            | a |   | 1 | b |   |   | c | i | l |
+            |   |   |   |   |   |   | h | k |   |
+
+        And the ways
+            | nodes | name | highway        | oneway | turn:lanes:forward   |
+            | abc   | road | secondary      | yes    | left\|through\|right |
+            | cil   | road | secondary      | yes    |                      |
+            | mjgef | road | secondary      | yes    |                      |
+            | bde   | road | secondary_link | yes    |                      |
+            | ngch  | turn | secondary      | yes    |                      |
+            | kijo  | turn | secondary      | yes    |                      |
+
+        When I route I should get
+            | waypoints | bearings     | route | turns |
+            | 1,a       | 90,2 180,180 |       |       |

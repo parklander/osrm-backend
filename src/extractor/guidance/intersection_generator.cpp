@@ -158,7 +158,8 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 first_coordinate, turn_coordinate, third_coordinate);
 
             static std::set<util::Coordinate> cases;
-            if (angularDeviation(angle, compare_angle) >= 20)
+            if (angularDeviation(angle, compare_angle) >= 20 &&
+                !node_based_graph.GetEdgeData(onto_edge).road_classification.IsLowPriorityRoadClass())
             {
                 if (cases.count(turn_coordinate) == 0)
                 {
