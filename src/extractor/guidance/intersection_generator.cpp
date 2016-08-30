@@ -160,11 +160,12 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             static std::set<util::Coordinate> cases;
             if (angularDeviation(angle, compare_angle) >= 20)
             {
-                std::cout << "Changed Angle from " << compare_angle << " to " << angle
-                          << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
-                          << " " << toFloating(turn_coordinate.lon) << std::endl;
                 if (cases.count(turn_coordinate) == 0)
                 {
+                    std::cout << "Changed Angle from " << compare_angle << " to " << angle
+                              << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
+                              << " " << toFloating(turn_coordinate.lon) << std::endl;
+
                     print = true;
                     cases.insert(turn_coordinate);
                 }

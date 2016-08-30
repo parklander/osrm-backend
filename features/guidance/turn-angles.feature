@@ -502,3 +502,14 @@ Feature: Simple Turns
             | e,a       | spree,spree | depart,arrive            |
             | a,i       | spree,,     | depart,turn right,arrive |
             | e,i       | spree,,     | depart,turn left,arrive  |
+
+    #http://www.openstreetmap.org/#map=19/52.53731/13.36033
+
+    #Fork instead of turns:
+    #http://www.openstreetmap.org/#map=19/52.53293/13.32956
+
+    #http://www.openstreetmap.org/#map=19/52.50367/13.27853
+    #Additional turn straight?? http://0.0.0.0:8000/?z=18&center=52.503672%2C13.279000&loc=52.503282%2C13.279139&loc=52.503550%2C13.278335&hl=en&ly=&alt=&df=&srv=
+
+    #Invalid coc
+    #http://www.openstreetmap.org/#map=19/52.53500/13.19798
