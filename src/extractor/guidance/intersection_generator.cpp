@@ -85,6 +85,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             !restriction_map.CheckIfTurnIsRestricted(from_node, turn_node, to_node);
 
         auto angle = 0.;
+        double bearing = 0.;
         if (from_node == to_node)
         {
             uturn_could_be_valid = turn_is_valid;
@@ -157,9 +158,12 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             angle = util::coordinate_calculation::computeAngle(
                 first_coordinate, turn_coordinate, third_coordinate);
 
+            bearing = util::coordinate_calculation::bearing(turn_coordinate, third_coordinate);
+
             static std::set<util::Coordinate> cases;
             if (angularDeviation(angle, compare_angle) >= 20 &&
-                !node_based_graph.GetEdgeData(onto_edge).road_classification.IsLowPriorityRoadClass())
+                !node_based_graph.GetEdgeData(onto_edge)
+                     .road_classification.IsLowPriorityRoadClass())
             {
                 if (cases.count(turn_coordinate) == 0)
                 {
@@ -177,6 +181,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
         intersection.push_back(
             ConnectedRoad(TurnOperation{onto_edge,
                                         angle,
+                                        bearing,
                                         {TurnType::Invalid, DirectionModifier::UTurn},
                                         INVALID_LANE_DATAID},
                           turn_is_valid));
@@ -187,10 +192,21 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
     // will never happen we add an artificial invalid uturn in this case.
     if (!has_uturn_edge)
     {
-        intersection.push_back(
-            {TurnOperation{
-                 via_eid, 0., {TurnType::Invalid, DirectionModifier::UTurn}, INVALID_LANE_DATAID},
-             false});
+        const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
+            from_node,
+            via_eid,
+            INVERT,
+            turn_node,
+            node_based_graph.GetEdgeData(via_eid).road_classification.GetNumberOfLanes());
+        const double bearing =
+            util::coordinate_calculation::bearing(turn_coordinate, first_coordinate);
+
+        intersection.push_back({TurnOperation{via_eid,
+                                              0.,
+                                              bearing,
+                                              {TurnType::Invalid, DirectionModifier::UTurn},
+                                              INVALID_LANE_DATAID},
+                                false});
     }
 
     const auto ByAngle = [](const ConnectedRoad &first, const ConnectedRoad second) {
@@ -393,31 +409,16 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
 
     const auto merge = [](const ConnectedRoad &first,
                           const ConnectedRoad &second) -> ConnectedRoad {
-        if (!first.entry_allowed)
-        {
-            ConnectedRoad result = second;
-            result.turn.angle = (first.turn.angle + second.turn.angle) / 2;
-            if (first.turn.angle - second.turn.angle > 180)
-                result.turn.angle += 180;
-            if (result.turn.angle > 360)
-                result.turn.angle -= 360;
-
-            return result;
-        }
-        else
-        {
-            BOOST_ASSERT(!second.entry_allowed);
-            ConnectedRoad result = first;
-            result.turn.angle = (first.turn.angle + second.turn.angle) / 2;
-
-            if (first.turn.angle - second.turn.angle > 180)
-                result.turn.angle += 180;
-            if (result.turn.angle > 360)
-                result.turn.angle -= 360;
-
-            return result;
-        }
+        ConnectedRoad result = first.entry_allowed ? first : second;
+        result.turn.angle = (first.turn.angle + second.turn.angle) / 2;
+        result.turn.bearing = (first.turn.bearing + second.turn.bearing) / 2;
+        if (first.turn.angle - second.turn.angle > 180)
+            result.turn.angle += 180;
+        if (result.turn.angle > 360)
+            result.turn.angle -= 360;
+        return result;
     };
+
     if (intersection.size() <= 1)
         return intersection;
 
@@ -591,6 +592,7 @@ Intersection IntersectionGenerator::AdjustForJoiningRoads(const NodeID node_at_i
             // at the target intersection, we merge to the right, so we need to shift the current
             // angle to the left
             road.turn.angle = adjustAngle(road.turn.angle, offset);
+            road.turn.bearing = adjustAngle(road.turn.bearing, offset);
         }
         else if (CanMerge(node_at_next_intersection,
                           next_intersection_along_road,
@@ -605,6 +607,7 @@ Intersection IntersectionGenerator::AdjustForJoiningRoads(const NodeID node_at_i
             // at the target intersection, we merge to the left, so we need to shift the current
             // angle to the right
             road.turn.angle = adjustAngle(road.turn.angle, -offset);
+            road.turn.bearing = adjustAngle(road.turn.bearing, -offset);
         }
     }
     return intersection;

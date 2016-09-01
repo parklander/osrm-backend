@@ -1,5 +1,5 @@
-#include "extractor/edge_based_graph_factory.hpp"
 #include "extractor/edge_based_edge.hpp"
+#include "extractor/edge_based_graph_factory.hpp"
 #include "util/coordinate.hpp"
 #include "util/coordinate_calculation.hpp"
 #include "util/exception.hpp"
@@ -373,11 +373,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             // the entry class depends on the turn, so we have to classify the interesction for
             // every edge
-            const auto turn_classification = classifyIntersection(node_v,
-                                                                  intersection,
-                                                                  *m_node_based_graph,
-                                                                  m_compressed_edge_container,
-                                                                  m_node_info_list);
+            const auto turn_classification = classifyIntersection(intersection);
 
             const auto entry_class_id = [&](const util::guidance::EntryClass entry_class) {
                 if (0 == entry_class_hash.count(entry_class))
