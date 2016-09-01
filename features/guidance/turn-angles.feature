@@ -820,9 +820,187 @@ Feature: Simple Turns
             | b    | traffic_signals |
 
         When I route I should get
-            | waypoints | route          | turns                    |
-            | a,e       | Heide,Heide,Heide | depart,continue uturn,arrive |
-            | a,g       | Heide,Perle,Fenn | depart,turn right,arrive |
+            | waypoints | route               | turns                           |
+            | a,e       | Heide,Heide,Heide   | depart,continue uturn,arrive    |
+            | a,g       | Heide,Perle,Fenn    | depart,turn right,arrive        |
             | a,h       | Heide,Friede,Friede | depart,new name straight,arrive |
-            | i,e       | Perle,Heide,Heide | depart,turn right,arrive |
-            | i,h       | Perle,Friede,Friede | depart,turn left, arrive |
+            | i,e       | Perle,Heide,Heide   | depart,turn right,arrive        |
+            | i,h       | Perle,Friede,Friede | depart,turn left, arrive        |
+
+    #http://www.openstreetmap.org/#map=19/52.48630/13.36017
+    Scenario: Don't Break U-turns
+        Given the node map
+            # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | b |   |   |   |   |  |   |   |   |   |   | a |
+            |   |   |   |   |   |   |   |   |   |   |   | c |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   | i |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            | d |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   | j |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            | e |   |   |   |   |   |   |   | k |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   | l |   |   |   |   |   |   |   |   |   | g |   |   |   |   |   |  |   |   |   |   |   | h |
+
+        And the ways
+            | nodes  | name    | oneway | lanes | highway     |
+            | ab     | julius  | yes    | 2     | secondary   |
+            | gh     | julius  | yes    | 2     | secondary   |
+            | bcd    | kolonne | yes    | 2     | secondary   |
+            | ekg    | kolonne | yes    | 2     | secondary   |
+            | cijkf  | feurig  | yes    |       | residential |
+            | fl     | feurig  | no     |       | residential |
+
+        When I route I should get
+            | waypoints | route                   | turns                        |
+            | b,g       | kolonne,kolonne,kolonne | depart,continue uturn,arrive |
+
+    #http://www.openstreetmap.org/#map=19/52.51633/13.42077
+    Scenario: Service Road at the end with slight offset
+        Given the node map
+            # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |   |   |   |   |   |   |   |   |  |   |   |   |   |   | e |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            | c |   |   |   |   |   |   |   |   |   |   |   |   |   |   | b |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | a |   |   |   |   |   |   |   |   |  |   |   |   |   |   |   |
+
+        And the ways
+            | nodes  | name | highway     |
+            | ab     | holz | residential |
+            | bc     |      | service     |
+            | bde    |      | service     |
+
+        When I route I should get
+            | waypoints | route      | turns                    |
+            | e,c       | ,          | depart,arrive            |
+            | e,a       | ,holz,holz | depart,turn left,arrive  |
+            | c,e       | ,          | depart,arrive            |
+            | c,a       | ,holz,holz | depart,turn right,arrive |
+
+    #http://www.openstreetmap.org/#map=19/52.45037/13.51923
+    Scenario: Special Turn Road
+        Given the node map
+            # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30 31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49   50
+            | h |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | g |   |   |   |   | f |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   | d |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | a |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | c |
+
+        And the ways
+            | nodes | name | ref | lanes | highway      |
+            | abc   | mich | b9  | 3     | primary      |
+            | fgh   | mich | b9  | 3     | primary      |
+            | bdeg  | mich |     |       | primary_link |
+
+        When I route I should get
+            | waypoints | route                         | turns                        |
+            | a,h       | mich (b9),mich (b9),mich (b9) | depart,continue uturn,arrive |
+
+    #http://www.openstreetmap.org/#map=19/52.49449/13.18116
+    Scenario: Curved Parking Lot Road
+        Given the node map
+            # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | m |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | l |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | k |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | j |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | i |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | h |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | g |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | a |   |   |   |   |   |   |   |   |   |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   | c |
+
+        And the ways
+            | nodes    | name | oneway | highway     |
+            | abc      | gato | yes    | residential |
+            | def      | gato | yes    | residential |
+            | bghijkle |      | yes    | service     |
+            | em       | hain | no     | service     |
+
+        When I route I should get
+            | waypoints | route          | turns                        |
+            | a,f       | gato,gato,gato | depart,continue uturn,arrive |
+            | d,m       | gato,hain,hain | depart,turn right,arrive     |
+            | a,m       | gato,hain,hain | depart,turn left,arrive      |
+            | d,f       | gato,gato      | depart,arrive                |
+
+    #http://www.openstreetmap.org/#map=19/52.60831/13.42990
+    Scenario: Double Curve Turn
+        Given the node map
+            # 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | d |
+            | f |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | e |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | g |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   | h |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | c |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   | i |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            | a |   |   |   |   |   |   |   |   |   |   |   |   |   |   | b |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | j |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | k |
+
+        And the ways
+            | nodes  | name  | oneway | highway   | lanes |
+            | ab     | rose  | yes    | secondary | 2     |
+            | ef     | rose  | yes    | secondary | 2     |
+            | de     | trift | yes    | secondary | 2     |
+            | bc     | trift | yes    | secondary | 2     |
+            | eghibj | muhle | yes    | tertiary  | 1     |
+
+        And the nodes
+            | node | highway         |
+            | h    | traffic_signals |
+            | j    | traffic_signals |
+
+        When I route I should get
+            | waypoints | route             | turns                           |
+            | a,c       | rose,trift,trift  | depart,new name straight,arrive |
+            | a,k       | rose,muhle,muhle  | depart,turn right,arrive        |
+            | d,f       | trift,rose,rose   | depart,new name straight,arrive |
+            | d,k       | trift,muhle,muhle | depart,turn left,arrive         |
+            | d,c       | trift,trift,trift | depart,continue uturn,arrive    |
