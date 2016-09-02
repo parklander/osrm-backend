@@ -11,6 +11,8 @@
     - Bugfixes
       - Fixed an issue that would result in segfaults for viaroutes with an invalid intermediate segment when u-turns were allowed at the via-location
       - Invalid only_* restrictions could result in loss of connectivity. As a fallback, we assume all turns allowed when the restriction is not valid
+      - Fixed an issue that could emit `invalid` as instruction when ending on a sliproad after a traffic-light
+      - Fixed an issue that would detect turning circles as sliproads
 
 # 5.3.0
   Changes from 5.3.0-rc.3
