@@ -417,14 +417,15 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 BOOST_ASSERT(!edge_data2.reversed);
 
                 // the following is the core of the loop.
-                unsigned distance = edge_data1.distance;
+                double distance = edge_data1.distance;
                 if (m_traffic_lights.find(node_v) != m_traffic_lights.end())
                 {
                     distance += profile_properties.traffic_signal_penalty;
                 }
 
-                const int32_t turn_penalty =
+                const auto turn_penalty =
                     scripting_environment.GetTurnPenalty(180. - turn.angle);
+
                 const auto turn_instruction = turn.instruction;
 
                 if (turn_instruction.direction_modifier == guidance::DirectionModifier::UTurn)
@@ -458,7 +459,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 m_edge_based_edge_list.emplace_back(edge_data1.edge_id,
                                                     edge_data2.edge_id,
                                                     m_edge_based_edge_list.size(),
-                                                    distance,
+                                                    boost::numeric_cast<unsigned>(distance),
                                                     true,
                                                     false);
 
@@ -526,7 +527,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                         m_node_info_list[m_compressed_edge_container.GetFirstEdgeTargetID(
                             turn.eid)];
 
-                    const unsigned fixed_penalty = distance - edge_data1.distance;
+                    const unsigned fixed_penalty = boost::numeric_cast<unsigned>(distance) - edge_data1.distance;
                     lookup::PenaltyBlock penaltyblock = {
                         fixed_penalty, from_node.node_id, via_node.node_id, to_node.node_id};
                     edge_penalty_file.write(reinterpret_cast<const char *>(&penaltyblock),
