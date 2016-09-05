@@ -27,7 +27,7 @@ struct ExtractionNode;
 struct ExtractionWay;
 
 /**
- * This class is uses by the extractor with the results of the
+ * This class is used by the extractor with the results of the
  * osmium based parsing and the customization through the lua profile.
  *
  * It mediates between the multi-threaded extraction process and the external memory containers.
@@ -37,7 +37,7 @@ class ExtractorCallbacks
 {
   private:
     // used to deduplicate street names and street destinations: actually maps to name ids
-    using MapKey = std::pair<std::string, std::string>;
+    using MapKey = std::tuple<std::string, std::string, std::string>;
     using MapVal = unsigned;
     std::unordered_map<MapKey, MapVal, boost::hash<MapKey>> string_map;
     std::unordered_map<guidance::TurnLaneDescription,

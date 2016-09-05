@@ -16,7 +16,7 @@ Feature: Car - Street names in instructions
 
         When I route I should get
             | from | to | route                              |
-            | a    | c  | My Way,Your Way (A1),Your Way (A1) |
+            | a    | c  | My Way,Your Way,Your Way           |
 
     Scenario: Car - A named street with pronunciation
         Given the node map
@@ -25,14 +25,14 @@ Feature: Car - Street names in instructions
             |   | c |   |
 
         And the ways
-            | nodes | name     |name:pronunciation | ref |
+            | nodes | name     |name:pronunciation  | ref |
             | ab    | My Way   |                    |     |
             | bd    | My Way   | meyeway            | A1  |
             | cd    | Your Way | yourewaye          |     |
 
         When I route I should get
-            | from | to | route              | pronunciations      |
-            | a    | d  | My Way,My Way (A1) | ,meyeway             |
+            | from | to | route              | pronunciations       |
+            | a    | d  | My Way,My Way      | meyeway,meyeway      |
             | 1    | c  | Your Way,Your Way  | yourewaye,yourewaye  |
 
     @todo

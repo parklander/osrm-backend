@@ -43,6 +43,7 @@ module.exports = function () {
 
                         if (hasRoute) {
                             instructions = this.wayList(json.routes[0]);
+                            refs = this.refList(json.routes[0]);
                             pronunciations = this.pronunciationList(json.routes[0]);
                             destinations = this.destinationsList(json.routes[0]);
                             bearings = this.bearingList(json.routes[0]);
