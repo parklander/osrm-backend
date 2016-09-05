@@ -387,12 +387,12 @@ function way_function (way, result)
   local has_name = name and "" ~= name
   local has_pronunciation = pronunciation and "" ~= pronunciation
 
-  if has_name and has_ref then
-    result.name = name .. " (" .. ref .. ")"
-  elseif has_ref then
-    result.name = ref
-  elseif has_name then
+  if has_name then
     result.name = name
+  end
+
+  if has_ref then
+    result.ref = ref
   end
 
   if has_pronunciation then
