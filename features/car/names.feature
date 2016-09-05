@@ -32,7 +32,7 @@ Feature: Car - Street names in instructions
 
         When I route I should get
             | from | to | route              | pronunciations       |
-            | a    | d  | My Way,My Way      | meyeway,meyeway      |
+            | a    | d  | My Way,My Way      | ,meyeway      |
             | 1    | c  | Your Way,Your Way  | yourewaye,yourewaye  |
 
     @todo
